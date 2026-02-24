@@ -1,0 +1,3054 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>TrollsBot</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#1a0e0e"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="TrollsBot"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ====================================================
+       MD3 DESIGN TOKENS + DARK SCHEME
+    ==================================================== */
+    :root {
+      /* MD3 Color System - Dynamic Color Scheme (Red Seed) */
+      --md-primary: #ffb3b3;
+      --md-on-primary: #680014;
+      --md-primary-container: #930024;
+      --md-on-primary-container: #ffdad9;
+      --md-secondary: #e7bdb9;
+      --md-on-secondary: #442927;
+      --md-secondary-container: #5d3f3c;
+      --md-on-secondary-container: #ffdad6;
+      --md-tertiary: #e6c58d;
+      --md-on-tertiary: #412d05;
+      --md-tertiary-container: #5a4319;
+      --md-on-tertiary-container: #ffe0ac;
+      --md-error: #ffb4ab;
+      --md-on-error: #690005;
+      --md-error-container: #93000a;
+      --md-on-error-container: #ffdad6;
+      --md-background: #1a0e0e;
+      --md-on-background: #f5dddb;
+      --md-surface: #201414;
+      --md-on-surface: #f5dddb;
+      --md-surface-variant: #534341;
+      --md-on-surface-variant: #d8c2c0;
+      --md-outline: #a08c8a;
+      --md-outline-variant: #534341;
+      --md-surface-1: #2c1919;
+      --md-surface-2: #321d1d;
+      --md-surface-3: #3a2121;
+      --md-surface-4: #3d2222;
+      --md-surface-5: #432525;
+
+      /* Elevation shadows */
+      --elevation-1: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
+      --elevation-2: 0 1px 2px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15);
+      --elevation-3: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
+
+      /* MD3 Shape tokens */
+      --shape-none: 0px;
+      --shape-extra-small: 4px;
+      --shape-small: 8px;
+      --shape-medium: 12px;
+      --shape-large: 16px;
+      --shape-extra-large: 28px;
+      --shape-full: 9999px;
+
+      /* Typography */
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+
+      /* State layers */
+      --state-hover: rgba(255,179,179,0.08);
+      --state-pressed: rgba(255,179,179,0.12);
+      --state-focused: rgba(255,179,179,0.12);
+
+      /* Custom app vars */
+      --chat-user-bg: var(--md-primary-container);
+      --chat-user-text: var(--md-on-primary-container);
+      --chat-bot-bg: var(--md-surface-2);
+      --chat-bot-text: var(--md-on-surface);
+      --gold: #e0c060;
+      --green: #6dbf8b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--md-background);
+      color: var(--md-on-surface);
+      height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ====================================================
+       AMBIENT BACKGROUND
+    ==================================================== */
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      overflow: hidden;
+    }
+    .bg-blob {
+      position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.12;
+      animation: blobDrift linear infinite;
+    }
+    .bg-blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, #ff2020 0%, transparent 70%); top: -200px; left: -150px; animation-duration: 22s; }
+    .bg-blob-2 { width: 400px; height: 400px; background: radial-gradient(circle, #8b0000 0%, transparent 70%); bottom: -100px; right: -100px; animation-duration: 28s; animation-direction: reverse; }
+    .bg-blob-3 { width: 300px; height: 300px; background: radial-gradient(circle, #c04000 0%, transparent 70%); top: 50%; left: 55%; animation-duration: 19s; animation-delay: -8s; }
+    @keyframes blobDrift {
+      0%   { transform: translate(0,0) scale(1) rotate(0deg); }
+      25%  { transform: translate(20px,-30px) scale(1.05) rotate(3deg); }
+      50%  { transform: translate(-15px,25px) scale(0.95) rotate(-2deg); }
+      75%  { transform: translate(30px,10px) scale(1.02) rotate(2deg); }
+      100% { transform: translate(0,0) scale(1) rotate(0deg); }
+    }
+
+    /* ====================================================
+       SPLASH / ONBOARDING SCREEN
+    ==================================================== */
+    #splash-screen {
+      position: fixed; inset: 0; z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: var(--md-background);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    #splash-screen.exit {
+      opacity: 0; transform: scale(0.95);
+      pointer-events: none;
+    }
+    #splash-screen.gone { display: none; }
+
+    .splash-logo-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      margin-bottom: 60px;
+      animation: splashEntrance 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+    }
+    @keyframes splashEntrance {
+      from { opacity: 0; transform: translateY(30px) scale(0.8); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .splash-icon {
+      width: 96px; height: 96px; border-radius: 28px;
+      background: linear-gradient(145deg, var(--md-primary-container), #500010);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 60px rgba(255,32,32,0.4), var(--elevation-3);
+      position: relative; overflow: hidden;
+    }
+    .splash-icon::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    }
+    .splash-icon-text { font-size: 48px; position: relative; z-index: 1; }
+    .splash-title {
+      font-size: 42px; font-weight: 700; letter-spacing: -1px;
+      color: var(--md-on-primary-container);
+      text-shadow: 0 0 40px rgba(255,100,100,0.3);
+    }
+    .splash-title span { color: var(--md-primary); }
+    .splash-subtitle { font-size: 14px; color: var(--md-on-surface-variant); letter-spacing: 0.5px; }
+
+    .splash-features {
+      display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px;
+      animation: splashEntrance 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.5s both;
+      margin-bottom: 40px;
+    }
+    .splash-feat {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      background: var(--md-surface-1);
+      border: 1px solid rgba(255,179,179,0.1);
+      border-radius: var(--shape-large);
+      box-shadow: var(--elevation-1);
+    }
+    .splash-feat-icon { font-size: 22px; flex-shrink: 0; }
+    .splash-feat-text { font-size: 13px; color: var(--md-on-surface-variant); line-height: 1.4; }
+    .splash-feat-text strong { color: var(--md-on-surface); display: block; font-size: 14px; margin-bottom: 1px; }
+
+    .splash-cta {
+      animation: splashEntrance 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.7s both;
+      width: 100%; max-width: 340px;
+    }
+    .btn-md3-filled {
+      display: block; width: 100%; padding: 16px 24px;
+      background: var(--md-primary); color: var(--md-on-primary);
+      border: none; border-radius: var(--shape-full);
+      font-family: var(--font-display); font-size: 15px; font-weight: 600;
+      letter-spacing: 0.5px; cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.1s;
+      box-shadow: var(--elevation-2);
+      text-align: center;
+    }
+    .btn-md3-filled:hover { box-shadow: var(--elevation-3); transform: translateY(-1px); }
+    .btn-md3-filled:active { transform: scale(0.98); }
+    .btn-md3-filled:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+    /* ====================================================
+       AUTH OVERLAY
+    ==================================================== */
+    .overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(15, 8, 8, 0.75);
+      backdrop-filter: blur(16px) saturate(150%);
+      padding: 16px;
+      animation: overlayFadeIn 0.25s ease;
+    }
+    .overlay.hidden { display: none; }
+    @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* MD3 Dialog / Modal */
+    .md3-dialog {
+      background: var(--md-surface-3);
+      border-radius: var(--shape-extra-large);
+      box-shadow: 0 8px 60px rgba(0,0,0,0.5);
+      width: 100%; max-width: 480px;
+      max-height: 92dvh; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--md-outline) transparent;
+      animation: dialogSlide 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+    }
+    @keyframes dialogSlide {
+      from { opacity: 0; transform: translateY(24px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .dialog-header {
+      padding: 28px 28px 8px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .dialog-icon { font-size: 24px; margin-bottom: 8px; }
+    .dialog-title {
+      font-size: 24px; font-weight: 700; letter-spacing: -0.5px;
+      color: var(--md-on-surface);
+    }
+    .dialog-subtitle { font-size: 13px; color: var(--md-on-surface-variant); }
+    .dialog-body { padding: 16px 28px 28px; }
+    .dialog-divider { height: 1px; background: var(--md-outline-variant); margin: 0 28px; opacity: 0.4; }
+
+    /* MD3 Tabs */
+    .md3-tabs {
+      display: flex; padding: 0 28px;
+      border-bottom: 1px solid var(--md-outline-variant);
+      gap: 0;
+    }
+    .md3-tab {
+      flex: 1; padding: 12px 8px; border: none; background: none;
+      font-family: var(--font-display); font-size: 13px; font-weight: 600;
+      color: var(--md-on-surface-variant); cursor: pointer;
+      position: relative; letter-spacing: 0.2px;
+      transition: color 0.2s;
+    }
+    .md3-tab::after {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 3px; background: var(--md-primary); border-radius: 3px 3px 0 0;
+      transform: scaleX(0); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .md3-tab.active { color: var(--md-primary); }
+    .md3-tab.active::after { transform: scaleX(1); }
+
+    /* MD3 Text Field */
+    .md3-field { margin-bottom: 16px; position: relative; }
+    .md3-field-label {
+      display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--md-on-surface-variant); margin-bottom: 6px;
+    }
+    .md3-input {
+      width: 100%; padding: 14px 16px;
+      background: var(--md-surface-1);
+      border: 1.5px solid var(--md-outline-variant);
+      border-radius: var(--shape-medium);
+      color: var(--md-on-surface);
+      font-family: var(--font-display); font-size: 15px;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .md3-input:focus {
+      border-color: var(--md-primary);
+      box-shadow: 0 0 0 3px rgba(255,179,179,0.15);
+    }
+    .md3-input::placeholder { color: var(--md-on-surface-variant); opacity: 0.5; }
+    .md3-input.error { border-color: var(--md-error); }
+    .field-error { font-size: 11px; color: var(--md-error); margin-top: 4px; }
+
+    /* Buttons */
+    .btn-filled {
+      display: block; width: 100%; padding: 14px 24px;
+      background: var(--md-primary); color: var(--md-on-primary);
+      border: none; border-radius: var(--shape-full);
+      font-family: var(--font-display); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.2px;
+      box-shadow: var(--elevation-1);
+    }
+    .btn-filled:hover { box-shadow: var(--elevation-2); filter: brightness(1.05); }
+    .btn-filled:active { transform: scale(0.98); }
+    .btn-filled:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+
+    .btn-tonal {
+      display: block; width: 100%; padding: 14px 24px;
+      background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+      border: none; border-radius: var(--shape-full);
+      font-family: var(--font-display); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; margin-top: 10px;
+    }
+    .btn-tonal:hover { filter: brightness(1.1); }
+
+    .btn-outlined {
+      display: block; width: 100%; padding: 14px 24px;
+      background: transparent; color: var(--md-on-surface-variant);
+      border: 1.5px solid var(--md-outline-variant); border-radius: var(--shape-full);
+      font-family: var(--font-display); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; margin-top: 10px;
+    }
+    .btn-outlined:hover { background: var(--state-hover); border-color: var(--md-outline); }
+
+    .btn-sm {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--shape-full);
+      font-family: var(--font-display); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; border: none;
+      white-space: nowrap;
+    }
+    .btn-sm.filled { background: var(--md-primary); color: var(--md-on-primary); }
+    .btn-sm.tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+    .btn-sm.ghost { background: var(--md-surface-2); color: var(--md-on-surface-variant); border: 1px solid var(--md-outline-variant); }
+
+    /* Title picker */
+    .title-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+    .title-opt {
+      padding: 12px; border-radius: var(--shape-large);
+      background: var(--md-surface-1); border: 1.5px solid transparent;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .title-opt:hover { border-color: var(--md-outline); background: var(--md-surface-2); }
+    .title-opt.selected { border-color: var(--md-primary); background: rgba(255,179,179,0.1); }
+    .title-opt-badge { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
+    .title-opt-name { font-size: 13px; font-weight: 700; color: var(--md-on-surface); }
+    .title-opt-desc { font-size: 10px; color: var(--md-on-surface-variant); margin-top: 2px; }
+
+    /* ====================================================
+       MAIN APP LAYOUT
+    ==================================================== */
+    #app {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 900px;
+      height: 100dvh;
+      display: flex; flex-direction: column;
+    }
+
+    /* ====================================================
+       TOP APP BAR (MD3)
+    ==================================================== */
+    #top-bar {
+      background: var(--md-surface-2);
+      border-bottom: 1px solid var(--md-outline-variant);
+      padding: 0 16px;
+      display: flex; flex-direction: column;
+      gap: 0; flex-shrink: 0;
+      box-shadow: var(--elevation-1);
+      z-index: 10;
+    }
+    .topbar-row1 {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px; gap: 8px;
+    }
+    .topbar-brand {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .brand-icon {
+      width: 36px; height: 36px; border-radius: var(--shape-small);
+      background: var(--md-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: var(--elevation-1);
+    }
+    .brand-name {
+      font-size: 19px; font-weight: 700; letter-spacing: -0.3px;
+      color: var(--md-on-surface);
+    }
+    .brand-version { font-size: 10px; color: var(--md-primary); font-weight: 600; }
+    .brand-status {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--green); margin-top: 1px;
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green); animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+
+    .topbar-actions {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+    }
+    /* MD3 Icon Button */
+    .icon-btn-md3 {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: var(--shape-full);
+      background: var(--md-surface-3); border: 1px solid var(--md-outline-variant);
+      color: var(--md-on-surface-variant);
+      font-family: var(--font-display); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .icon-btn-md3:hover { background: var(--state-hover); color: var(--md-on-surface); border-color: var(--md-outline); }
+    .icon-btn-md3.highlight {
+      background: rgba(255,179,179,0.15); border-color: var(--md-primary);
+      color: var(--md-primary);
+    }
+    .icon-btn-md3 .btn-icon { font-size: 14px; }
+
+    /* User chip */
+    .user-chip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px 6px 8px;
+      background: var(--md-surface-4); border-radius: var(--shape-full);
+      border: 1px solid var(--md-outline-variant);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .user-chip:hover { background: var(--md-surface-5); border-color: var(--md-outline); }
+    .user-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--md-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--md-on-primary-container);
+      flex-shrink: 0;
+    }
+    .chip-nick { font-size: 13px; font-weight: 600; color: var(--md-on-surface); }
+    .chip-rating { font-size: 11px; color: var(--gold); font-weight: 600; }
+
+    /* Mode selector row */
+    .topbar-row2 {
+      display: flex; align-items: center; gap: 8px;
+      padding-bottom: 10px; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .topbar-row2::-webkit-scrollbar { display: none; }
+    .mode-chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 16px; border-radius: var(--shape-full);
+      border: 1.5px solid var(--md-outline-variant);
+      background: transparent; color: var(--md-on-surface-variant);
+      font-family: var(--font-display); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    }
+    .mode-chip[data-mode="easy"].active { background: rgba(109,191,139,0.2); border-color: var(--green); color: var(--green); }
+    .mode-chip[data-mode="medium"].active { background: rgba(224,192,96,0.2); border-color: var(--gold); color: var(--gold); }
+    .mode-chip[data-mode="ultra"].active {
+      background: rgba(255,100,100,0.2); border-color: var(--md-primary); color: var(--md-primary);
+      animation: chip-glow 1.5s ease-in-out infinite;
+    }
+    @keyframes chip-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,179,179,0.3); }
+      50% { box-shadow: 0 0 12px 2px rgba(255,179,179,0.4); }
+    }
+    #duel-mode-badge {
+      display: none; margin-left: auto; flex-shrink: 0;
+      font-size: 11px; font-weight: 700; color: var(--md-primary);
+      padding: 4px 10px; border-radius: var(--shape-full);
+      background: rgba(255,179,179,0.15); border: 1px solid var(--md-primary);
+      animation: chip-glow 1.5s ease-in-out infinite;
+    }
+
+    /* ====================================================
+       CHAT MESSAGES
+    ==================================================== */
+    #chat-messages {
+      flex: 1; overflow-y: auto; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      scrollbar-width: thin; scrollbar-color: var(--md-outline-variant) transparent;
+    }
+    #chat-messages::-webkit-scrollbar { width: 4px; }
+    #chat-messages::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 2px; }
+
+    .message {
+      max-width: 76%; padding: 12px 16px;
+      border-radius: var(--shape-extra-large);
+      font-size: 14px; line-height: 1.55; word-break: break-word;
+      animation: msgIn 0.28s cubic-bezier(0.34,1.2,0.64,1);
+      position: relative;
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .message.user {
+      background: var(--md-primary-container); color: var(--md-on-primary-container);
+      align-self: flex-end;
+      border-bottom-right-radius: var(--shape-extra-small);
+    }
+    .message.bot {
+      background: var(--md-surface-2); color: var(--md-on-surface);
+      align-self: flex-start;
+      border-bottom-left-radius: var(--shape-extra-small);
+      border: 1px solid var(--md-outline-variant);
+    }
+    .message.system {
+      background: var(--md-surface-3); color: var(--md-on-surface-variant);
+      align-self: center; text-align: center; font-size: 12px;
+      max-width: 88%; border-radius: var(--shape-large);
+      border: 1px solid var(--md-outline-variant);
+    }
+    .message.opponent {
+      background: var(--md-surface-3); color: #a0a8ff;
+      align-self: flex-start;
+      border-bottom-left-radius: var(--shape-extra-small);
+      border: 1px solid rgba(120,130,255,0.2);
+    }
+    .msg-meta {
+      font-size: 10px; color: inherit; opacity: 0.5;
+      margin-top: 4px; letter-spacing: 0.3px;
+    }
+
+    /* Typing indicator */
+    .typing-bubble {
+      display: flex; gap: 4px; align-items: center;
+      padding: 14px 18px; border-radius: var(--shape-extra-large);
+      border-bottom-left-radius: var(--shape-extra-small);
+      background: var(--md-surface-2); border: 1px solid var(--md-outline-variant);
+      align-self: flex-start;
+      animation: msgIn 0.2s ease;
+    }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--md-on-surface-variant); animation: typeDot 1s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes typeDot { 0%,60%,100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+    /* ====================================================
+       DUEL BAR
+    ==================================================== */
+    #duel-bar {
+      display: none; background: var(--md-surface-2);
+      border-bottom: 1px solid var(--md-outline-variant);
+      padding: 12px 20px; flex-shrink: 0;
+    }
+    #duel-bar.active { display: block; }
+    .duel-row1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .duel-title-bar { font-size: 12px; font-weight: 700; color: var(--md-primary); letter-spacing: 1px; }
+    .duel-clock { font-size: 20px; font-weight: 700; color: var(--gold); font-family: var(--font-mono); }
+    .duel-players { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .duel-player { text-align: center; }
+    .duel-name { font-size: 12px; font-weight: 700; }
+    .duel-wpm-val { font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--green); margin: 2px 0; }
+    .duel-stat-sm { font-size: 10px; color: var(--md-on-surface-variant); }
+    .duel-vs-badge { font-size: 14px; font-weight: 700; color: var(--md-primary); }
+    .duel-progress-bar { height: 4px; background: var(--md-outline-variant); border-radius: 2px; overflow: hidden; }
+    .duel-progress-fill { height: 100%; background: linear-gradient(90deg, var(--md-primary-container), var(--md-primary)); border-radius: 2px; transition: width 1s linear; }
+    .duel-violation-txt { font-size: 10px; color: var(--md-error); margin-top: 4px; text-align: right; }
+
+    /* ====================================================
+       INPUT AREA
+    ==================================================== */
+    #input-area {
+      background: var(--md-surface-2); border-top: 1px solid var(--md-outline-variant);
+      padding: 12px 16px; display: flex; gap: 10px; align-items: flex-end;
+      flex-shrink: 0;
+    }
+    #user-input {
+      flex: 1; padding: 12px 16px;
+      background: var(--md-surface-3);
+      border: 1.5px solid var(--md-outline-variant);
+      border-radius: var(--shape-extra-large);
+      color: var(--md-on-surface); font-family: var(--font-display); font-size: 14px;
+      outline: none; resize: none; max-height: 140px; line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+    #user-input:focus { border-color: var(--md-primary); }
+    #user-input::placeholder { color: var(--md-on-surface-variant); opacity: 0.5; }
+    #user-input:disabled { opacity: 0.38; }
+    #send-btn {
+      width: 46px; height: 46px; flex-shrink: 0;
+      background: var(--md-primary); color: var(--md-on-primary);
+      border: none; border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; box-shadow: var(--elevation-2);
+      font-size: 18px;
+    }
+    #send-btn:hover { box-shadow: var(--elevation-3); transform: scale(1.05); }
+    #send-btn:active { transform: scale(0.95); }
+
+    /* ====================================================
+       PANELS (MD3 Dialogs)
+    ==================================================== */
+    .md3-panel {
+      background: var(--md-surface-3);
+      border-radius: var(--shape-extra-large);
+      box-shadow: 0 8px 60px rgba(0,0,0,0.5);
+      width: 90%; max-width: 440px;
+      max-height: 90dvh; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--md-outline-variant) transparent;
+      animation: dialogSlide 0.35s cubic-bezier(0.34,1.1,0.64,1);
+      position: relative;
+    }
+    .md3-panel::-webkit-scrollbar { width: 4px; }
+    .md3-panel::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 2px; }
+    .panel-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 0;
+    }
+    .panel-headline { font-size: 20px; font-weight: 700; color: var(--md-on-surface); }
+    .panel-close-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: var(--md-surface-5); color: var(--md-on-surface-variant);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; transition: all 0.2s; flex-shrink: 0;
+    }
+    .panel-close-btn:hover { background: var(--md-surface-4); color: var(--md-on-surface); }
+    .panel-body { padding: 16px 24px 24px; }
+    .panel-divider { height: 1px; background: var(--md-outline-variant); margin: 16px 0; opacity: 0.5; }
+    .panel-section { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--md-on-surface-variant); margin-bottom: 12px; }
+
+    /* Stat grid */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .stat-card {
+      padding: 14px; background: var(--md-surface-2);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--shape-large); text-align: center;
+    }
+    .stat-val { font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--md-primary); }
+    .stat-val.gold { color: var(--gold); }
+    .stat-val.green { color: var(--green); }
+    .stat-label { font-size: 10px; color: var(--md-on-surface-variant); letter-spacing: 1px; margin-top: 4px; }
+
+    /* Achievement list */
+    .achieve-list { display: flex; flex-direction: column; gap: 8px; }
+    .achieve-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1px solid var(--md-outline-variant);
+      transition: all 0.2s;
+    }
+    .achieve-item.earned { border-color: rgba(224,192,96,0.3); background: rgba(224,192,96,0.06); }
+    .achieve-icon { font-size: 18px; flex-shrink: 0; }
+    .achieve-name { font-size: 13px; font-weight: 600; color: var(--md-on-surface); }
+    .achieve-desc { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 1px; }
+
+    /* Rating list */
+    .rating-list { display: flex; flex-direction: column; gap: 8px; }
+    .rating-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1px solid var(--md-outline-variant);
+    }
+    .rating-row.me { border-color: rgba(255,179,179,0.3); background: rgba(255,179,179,0.06); }
+    .rating-row.top1 { border-color: rgba(224,192,96,0.35); background: rgba(224,192,96,0.06); }
+    .rating-pos { font-size: 14px; font-weight: 800; width: 28px; text-align: center; color: var(--md-on-surface-variant); flex-shrink: 0; }
+    .rating-info { flex: 1; min-width: 0; }
+    .rating-name { font-size: 14px; font-weight: 600; }
+    .rating-sub { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 2px; }
+    .rating-pts { font-size: 17px; font-weight: 700; font-family: var(--font-mono); color: var(--gold); }
+
+    /* Toggle MD3 */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .toggle-row:last-of-type { border-bottom: none; }
+    .toggle-label { font-size: 13px; color: var(--md-on-surface-variant); }
+    .md3-toggle {
+      position: relative; width: 52px; height: 28px;
+      background: var(--md-surface-variant); border-radius: var(--shape-full);
+      cursor: pointer; transition: background 0.25s;
+      border: 2px solid var(--md-outline);
+    }
+    .md3-toggle.on { background: var(--md-primary); border-color: var(--md-primary); }
+    .md3-toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--md-outline); box-shadow: var(--elevation-1);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s;
+    }
+    .md3-toggle.on::after { transform: translateX(24px); background: var(--md-on-primary); }
+
+    /* Setting range */
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .setting-label { font-size: 13px; color: var(--md-on-surface-variant); }
+    input[type=range] {
+      -webkit-appearance: none; width: 100px; height: 4px;
+      background: var(--md-outline-variant); border-radius: 2px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      background: var(--md-primary); border-radius: 50%; cursor: pointer;
+      box-shadow: var(--elevation-1);
+    }
+    .range-val { font-size: 13px; font-family: var(--font-mono); color: var(--md-primary); min-width: 24px; text-align: right; }
+
+    /* Duel settings */
+    .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .time-card {
+      padding: 12px 8px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1.5px solid var(--md-outline-variant);
+      text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .time-card:hover { border-color: var(--md-outline); }
+    .time-card.active { border-color: var(--md-primary); background: rgba(255,179,179,0.1); }
+    .time-card-val { font-size: 18px; font-weight: 700; font-family: var(--font-mono); color: var(--md-primary); }
+    .time-card-label { font-size: 10px; color: var(--md-on-surface-variant); margin-top: 2px; letter-spacing: 1px; }
+
+    /* Stakes input */
+    .stakes-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+    .stakes-input {
+      width: 90px; padding: 10px 12px; text-align: center;
+      background: var(--md-surface-2); border: 1.5px solid var(--md-outline-variant);
+      border-radius: var(--shape-medium); color: var(--md-on-surface);
+      font-family: var(--font-mono); font-size: 16px; font-weight: 700; outline: none;
+    }
+    .stakes-input:focus { border-color: var(--md-primary); }
+
+    /* Lobby code */
+    .lobby-code {
+      font-size: 46px; font-weight: 700; font-family: var(--font-mono);
+      color: var(--md-primary); letter-spacing: 10px; text-align: center;
+      text-shadow: 0 0 30px rgba(255,179,179,0.3); margin: 16px 0;
+    }
+
+    /* Duel result */
+    .result-card {
+      padding: 20px; background: var(--md-surface-2);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--shape-extra-large); margin-bottom: 16px;
+    }
+    .result-title { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+    .result-subtitle { font-size: 13px; color: var(--md-on-surface-variant); text-align: center; margin-bottom: 20px; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .result-player { text-align: center; }
+    .result-player-name { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+    .result-stat { margin-bottom: 10px; }
+    .result-stat-val { font-size: 22px; font-weight: 700; font-family: var(--font-mono); color: var(--md-primary); }
+    .result-stat-label { font-size: 10px; color: var(--md-on-surface-variant); letter-spacing: 1px; }
+    .rating-delta { font-size: 15px; font-weight: 700; margin-top: 8px; }
+    .rating-delta.win { color: var(--green); }
+    .rating-delta.loss { color: var(--md-error); }
+
+    /* ====================================================
+       NICK DISPLAY IN PROFILE
+    ==================================================== */
+    .nick-hero { font-size: 26px; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--md-on-surface); }
+    .nick-hero.gold { color: var(--gold); text-shadow: 0 0 24px rgba(224,192,96,0.3); }
+    .nick-badge-wrap { text-align: center; margin-bottom: 16px; }
+    .nick-badge {
+      display: inline-block; padding: 6px 14px; border-radius: var(--shape-full);
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    }
+    .nick-rank { font-size: 11px; color: var(--md-on-surface-variant); text-align: center; letter-spacing: 1px; margin-bottom: 16px; }
+
+    /* Player list */
+    .player-list { display: flex; flex-direction: column; gap: 8px; }
+    .player-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1px solid var(--md-outline-variant);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .player-row:hover { background: var(--md-surface-3); border-color: var(--md-outline); }
+    .player-avatar-sm {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--md-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: var(--md-on-primary-container);
+      flex-shrink: 0;
+    }
+    .player-name { font-size: 13px; font-weight: 600; }
+    .player-sub { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 2px; }
+    .player-rating { font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--gold); margin-left: auto; }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+
+    /* BAN overlay */
+    #ban-overlay {
+      position: fixed; inset: 0; z-index: 150; display: none;
+      pointer-events: none;
+      border: 3px solid rgba(255,80,80,0.5);
+      animation: banFlash 1s ease-in-out infinite;
+    }
+    #ban-overlay.active { display: block; }
+    @keyframes banFlash { 0%,100% { box-shadow: inset 0 0 40px rgba(255,0,0,0.15); } 50% { box-shadow: inset 0 0 80px rgba(255,0,0,0.3); } }
+
+    /* ====================================================
+       TOASTS
+    ==================================================== */
+    #achieve-toast {
+      position: fixed; top: 20px; left: 50%;
+      transform: translateX(-50%) translateY(-120px);
+      background: var(--md-surface-3); backdrop-filter: blur(20px);
+      border: 1px solid rgba(224,192,96,0.4);
+      border-radius: var(--shape-extra-large);
+      padding: 14px 24px; color: var(--gold);
+      font-family: var(--font-display); font-size: 13px; font-weight: 700;
+      text-align: center; z-index: 9999;
+      transition: transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+      pointer-events: none; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    #achieve-toast.show { transform: translateX(-50%) translateY(0); }
+
+    #notif-toast {
+      position: fixed; top: 20px; right: 20px;
+      background: var(--md-surface-4); backdrop-filter: blur(20px);
+      border: 1px solid var(--md-outline-variant);
+      border-radius: var(--shape-extra-large);
+      padding: 14px 20px; font-family: var(--font-display); font-size: 12px;
+      z-index: 9998; transition: all 0.4s cubic-bezier(0.34,1.2,0.64,1);
+      transform: translateX(240px); opacity: 0; max-width: 280px;
+      box-shadow: var(--elevation-3);
+    }
+    #notif-toast.show { transform: translateX(0); opacity: 1; }
+    .notif-title { font-size: 14px; font-weight: 700; color: var(--md-primary); margin-bottom: 4px; }
+    .notif-body { font-size: 12px; color: var(--md-on-surface-variant); }
+
+    #orient-toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--md-surface-4); backdrop-filter: blur(16px);
+      border: 1px solid var(--md-outline-variant); border-radius: var(--shape-full);
+      padding: 10px 20px; font-size: 12px; color: var(--md-on-surface-variant);
+      z-index: 9990; transition: transform 0.3s, opacity 0.3s;
+      opacity: 0; pointer-events: none; white-space: nowrap;
+    }
+    #orient-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ====================================================
+       🆕 KILLER FEATURE 1: TROLL METER / FURY BAR
+    ==================================================== */
+    #fury-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px; background: var(--md-surface-1);
+      border-bottom: 1px solid var(--md-outline-variant);
+      flex-shrink: 0;
+    }
+    .fury-label { font-size: 11px; font-weight: 700; color: var(--md-on-surface-variant); letter-spacing: 1px; flex-shrink: 0; }
+    .fury-track { flex: 1; height: 6px; background: var(--md-surface-variant); border-radius: 3px; overflow: hidden; }
+    .fury-fill {
+      height: 100%; width: 0%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--green), var(--gold), var(--md-error));
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+    .fury-emoji { font-size: 18px; transition: transform 0.3s; flex-shrink: 0; }
+    .fury-level { font-size: 12px; font-weight: 700; color: var(--md-primary); font-family: var(--font-mono); flex-shrink: 0; min-width: 28px; text-align: right; }
+
+    /* ====================================================
+       🆕 KILLER FEATURE 2: BOT PHRASE PREVIEW / REACTION
+    ==================================================== */
+    #bot-reaction {
+      position: absolute; bottom: 10px; right: 16px;
+      display: none; align-items: center; gap: 8px;
+      background: var(--md-surface-4); border: 1px solid var(--md-outline-variant);
+      border-radius: var(--shape-extra-large); padding: 6px 14px;
+      font-size: 12px; color: var(--md-on-surface-variant);
+      box-shadow: var(--elevation-2); animation: reactionPop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none; z-index: 5; max-width: 280px;
+    }
+    @keyframes reactionPop { from { opacity:0; transform: scale(0.8) translateY(5px); } to { opacity:1; transform: scale(1) translateY(0); } }
+    #bot-reaction.show { display: flex; }
+
+    /* ====================================================
+       🆕 KILLER FEATURE 3: STREAK COUNTER
+    ==================================================== */
+    #streak-badge {
+      display: none; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: var(--shape-full);
+      background: rgba(224,192,96,0.15); border: 1px solid rgba(224,192,96,0.3);
+      font-size: 12px; font-weight: 700; color: var(--gold);
+      animation: streakPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      flex-shrink: 0;
+    }
+    #streak-badge.show { display: flex; }
+    @keyframes streakPop { from { opacity:0; transform: scale(0.6); } to { opacity:1; transform: scale(1); } }
+
+    /* ====================================================
+       🆕 KILLER FEATURE 4: BOT MOOD INDICATOR
+    ==================================================== */
+    .bot-mood {
+      position: absolute; top: 10px; right: 12px;
+      font-size: 12px; color: var(--md-on-surface-variant);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mood-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* ====================================================
+       🆕 KILLER FEATURE 5: MINI KEYBOARD SHORTCUT HUD
+    ==================================================== */
+    #shortcut-hud {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--md-surface-4); border: 1px solid var(--md-outline-variant);
+      border-radius: var(--shape-extra-large);
+      padding: 14px 20px; z-index: 150; opacity: 0; pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: flex; gap: 20px; box-shadow: var(--elevation-3);
+    }
+    #shortcut-hud.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .shortcut-item { text-align: center; }
+    .shortcut-key {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 32px; height: 26px; padding: 0 8px;
+      background: var(--md-surface-variant); border: 1px solid var(--md-outline);
+      border-radius: var(--shape-small); border-bottom-width: 3px;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+      color: var(--md-on-surface); margin-bottom: 4px;
+    }
+    .shortcut-desc { font-size: 10px; color: var(--md-on-surface-variant); }
+
+    /* ====================================================
+       RESPONSIVE
+    ==================================================== */
+    @media (max-width: 480px) {
+      .topbar-actions { gap: 4px; }
+      .icon-btn-md3 { padding: 6px 10px; font-size: 11px; }
+      .icon-btn-md3 .btn-label { display: none; }
+      .chip-rating { display: none; }
+      .brand-name { font-size: 16px; }
+      .message { max-width: 88%; font-size: 13px; }
+      .md3-dialog, .md3-panel { width: 96%; max-height: 94dvh; }
+      .dialog-header, .dialog-body { padding-left: 20px; padding-right: 20px; }
+      .md3-tabs { padding: 0 20px; }
+      .panel-body { padding: 14px 18px 20px; }
+      .panel-topbar { padding: 16px 18px 0; }
+      #fury-bar { padding: 6px 12px; }
+      .time-grid { grid-template-columns: repeat(2,1fr); }
+      .stat-grid { gap: 6px; }
+    }
+    @media (max-height: 450px) and (orientation: landscape) {
+      #top-bar { gap: 0; }
+      .topbar-row2 { display: none; }
+      .message { font-size: 12px; padding: 8px 12px; }
+      #input-area { padding: 8px 12px; }
+      #fury-bar { padding: 4px 12px; }
+    }
+    @media (min-width: 769px) and (max-width: 1024px) {
+      #app { max-width: 720px; }
+    }
+    @media (min-width: 1025px) {
+      #app { max-width: 900px; }
+      .message { font-size: 14px; }
+      #user-input { font-size: 15px; }
+    }
+    @media (hover: none) and (pointer: coarse) {
+      .icon-btn-md3 { min-height: 44px; }
+      .btn-filled, .btn-outlined, .btn-tonal { padding: 16px 24px; }
+      .md3-toggle { width: 56px; height: 30px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.1ms !important; }
+    }
+
+    /* ====================================================
+       AVATAR UPLOAD
+    ==================================================== */
+    .avatar-upload-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .avatar-big {
+      width: 84px; height: 84px; border-radius: 50%;
+      background: var(--md-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; font-weight: 700; color: var(--md-on-primary-container);
+      border: 3px solid var(--md-outline-variant);
+      overflow: hidden; position: relative; cursor: pointer;
+      transition: border-color 0.2s;
+      flex-shrink: 0;
+    }
+    .avatar-big img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-big:hover { border-color: var(--md-primary); }
+    .avatar-big .avatar-edit-hint {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; opacity: 0; transition: opacity 0.2s; border-radius: 50%;
+    }
+    .avatar-big:hover .avatar-edit-hint { opacity: 1; }
+    #avatar-file-input { display: none; }
+
+    /* Socials */
+    .socials-row { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .social-link-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1px solid var(--md-outline-variant);
+      font-size: 13px; color: var(--md-on-surface); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .social-link-item:hover { border-color: var(--md-primary); background: var(--md-surface-3); }
+    .social-link-icon { font-size: 16px; flex-shrink: 0; }
+    .social-link-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Bio text */
+    .bio-text {
+      font-size: 13px; color: var(--md-on-surface-variant);
+      line-height: 1.6; padding: 12px 14px;
+      background: var(--md-surface-2); border-radius: var(--shape-large);
+      border: 1px solid var(--md-outline-variant);
+      margin-bottom: 4px; white-space: pre-wrap; word-break: break-word;
+    }
+    .bio-empty { opacity: 0.4; font-style: italic; }
+
+    /* Dev channel banner */
+    .dev-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; margin: 14px 0 4px;
+      background: linear-gradient(135deg, rgba(0,136,204,0.15), rgba(0,136,204,0.05));
+      border: 1px solid rgba(0,136,204,0.3); border-radius: var(--shape-large);
+      text-decoration: none; transition: all 0.2s; cursor: pointer;
+    }
+    .dev-banner:hover { border-color: rgba(0,136,204,0.6); background: linear-gradient(135deg, rgba(0,136,204,0.22), rgba(0,136,204,0.08)); }
+    .dev-banner-icon { font-size: 24px; flex-shrink: 0; }
+    .dev-banner-text { flex: 1; }
+    .dev-banner-title { font-size: 13px; font-weight: 700; color: #4fc3f7; }
+    .dev-banner-sub { font-size: 11px; color: var(--md-on-surface-variant); margin-top: 1px; }
+    .dev-banner-arrow { font-size: 16px; color: #4fc3f7; flex-shrink: 0; }
+
+    /* Viewer profile overlay */
+    #viewer-overlay .md3-panel { max-height: 88dvh; }
+    .viewer-avatar-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+    .viewer-avatar-big {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--md-primary-container);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 700; color: var(--md-on-primary-container);
+      border: 3px solid var(--md-outline-variant); overflow: hidden; flex-shrink: 0;
+    }
+    .viewer-avatar-big img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Rating row clickable */
+    .rating-row { cursor: pointer; }
+    .rating-row:hover { background: var(--md-surface-3) !important; border-color: var(--md-outline) !important; }
+
+    /* WPM panel */
+    .timer-pills { display: flex; gap: 8px; margin: 14px 0; }
+    .timer-pill {
+      flex: 1; padding: 12px; border-radius: var(--shape-large);
+      background: var(--md-surface-2); border: 1.5px solid var(--md-outline-variant);
+      color: var(--md-on-surface-variant); font-family: var(--font-display);
+      font-size: 12px; font-weight: 700; text-align: center; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .timer-pill:hover { border-color: var(--md-outline); }
+    .timer-pill.active { border-color: var(--md-primary); background: rgba(255,179,179,0.1); color: var(--md-primary); }
+  </style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="bg-canvas">
+  <div class="bg-blob bg-blob-1"></div>
+  <div class="bg-blob bg-blob-2"></div>
+  <div class="bg-blob bg-blob-3"></div>
+</div>
+
+<div id="ban-overlay"></div>
+
+<!-- ====================================================
+     SPLASH SCREEN
+==================================================== -->
+<div id="splash-screen">
+  <div class="splash-logo-wrap">
+    <div class="splash-icon"><div class="splash-icon-text">💀</div></div>
+    <div class="splash-title">Trolls<span>Bot</span></div>
+    <div class="splash-subtitle">ДОБРО ПОЖАЛОВАТЬ В АД · v6.0</div>
+  </div>
+  <div class="splash-features">
+    <div class="splash-feat">
+      <div class="splash-feat-icon">⚔️</div>
+      <div class="splash-feat-text"><strong>Дуэли в реальном времени</strong>Сразись с другом по коду лобби</div>
+    </div>
+    <div class="splash-feat">
+      <div class="splash-feat-icon">💢</div>
+      <div class="splash-feat-text"><strong>Fury Meter</strong>Следи за накалом обстановки</div>
+    </div>
+    <div class="splash-feat">
+      <div class="splash-feat-icon">👤</div>
+      <div class="splash-feat-text"><strong>Профили игроков</strong>Аватарка, описание, соцсети</div>
+    </div>
+  </div>
+  <a class="dev-banner" href="https://t.me/tacticat420" target="_blank" style="max-width:340px;width:100%">
+    <div class="dev-banner-icon">✈️</div>
+    <div class="dev-banner-text">
+      <div class="dev-banner-title">Канал разработчиков</div>
+      <div class="dev-banner-sub">@tacticat420 · Новости, обновления, релизы</div>
+    </div>
+    <div class="dev-banner-arrow">→</div>
+  </a>
+  <div class="splash-cta">
+    <button class="btn-md3-filled" onclick="dismissSplash()">НАЧАТЬ →</button>
+  </div>
+</div>
+
+<!-- ====================================================
+     AUTH SCREEN
+==================================================== -->
+<div class="overlay hidden" id="auth-screen">
+  <div class="md3-dialog">
+    <div class="dialog-header">
+      <div class="dialog-icon">🔥</div>
+      <div class="dialog-title">TrollBot</div>
+      <div class="dialog-subtitle">Войди или создай аккаунт</div>
+    </div>
+    <div class="md3-tabs">
+      <button class="md3-tab active" data-tab="login" onclick="switchAuthTab('login')">Войти</button>
+      <button class="md3-tab" data-tab="register" onclick="switchAuthTab('register')">Регистрация</button>
+      <button class="md3-tab" data-tab="guest" onclick="switchAuthTab('guest')">Гость</button>
+    </div>
+    <div class="dialog-body">
+      <!-- LOGIN -->
+      <div id="tab-login">
+        <div class="md3-field">
+          <label class="md3-field-label">Email</label>
+          <input class="md3-input" id="login-email" type="email" placeholder="твой@email.com" autocomplete="email">
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">Пароль</label>
+          <input class="md3-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="field-error" id="login-error"></div>
+        <button class="btn-filled" style="margin-top:16px" onclick="doLogin()">ВОЙТИ</button>
+      </div>
+      <!-- REGISTER -->
+      <div id="tab-register" style="display:none">
+        <div class="md3-field">
+          <label class="md3-field-label">Email</label>
+          <input class="md3-input" id="reg-email" type="email" placeholder="твой@email.com" autocomplete="email">
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">Пароль</label>
+          <input class="md3-input" id="reg-pass" type="password" placeholder="минимум 6 символов" autocomplete="new-password">
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">Никнейм</label>
+          <input class="md3-input" id="reg-nick" type="text" maxlength="20" placeholder="твоё имя..." autocomplete="off">
+        </div>
+        <div class="panel-section" style="margin-top:16px">Выбери звание</div>
+        <div class="title-grid" id="username-grid"></div>
+        <div class="field-error" id="reg-error"></div>
+        <button class="btn-filled" style="margin-top:8px" onclick="doRegister()">СОЗДАТЬ АККАУНТ</button>
+      </div>
+      <!-- GUEST -->
+      <div id="tab-guest" style="display:none">
+        <p style="color:var(--md-on-surface-variant);font-size:13px;line-height:1.65;margin-bottom:20px">
+          Анонимный режим. Статистика не сохраняется. Рейтинг и дуэли недоступны.
+        </p>
+        <div class="md3-field">
+          <label class="md3-field-label">Временный ник</label>
+          <input class="md3-input" id="guest-nick" type="text" maxlength="20" placeholder="аноним..." autocomplete="off">
+        </div>
+        <button class="btn-tonal" onclick="doGuest()">ВОЙТИ КАК ГОСТЬ</button>
+      </div>
+      <div style="margin-top:20px;font-size:10px;color:var(--md-on-surface-variant);opacity:0.5;letter-spacing:0.5px">
+        bot: ratmirzzz · text: astroboy · tester: bonzai · console: 420
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     MAIN APP
+==================================================== -->
+<div id="app">
+  <header id="top-bar">
+    <div class="topbar-row1">
+      <div class="topbar-brand">
+        <div class="brand-icon">💀</div>
+        <div>
+          <div class="brand-name">TrollsBot <span class="brand-version">v6</span></div>
+          <div class="brand-status"><div class="status-dot"></div>онлайн</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="user-chip" onclick="openProfile()" id="user-chip">
+          <div class="user-avatar" id="header-avatar">?</div>
+          <span class="chip-nick" id="header-nick">...</span>
+          <span class="chip-rating" id="header-rating"></span>
+        </div>
+        <button class="icon-btn-md3" onclick="openSkill()"><span class="btn-icon">⌨️</span><span class="btn-label">WPM</span></button>
+        <button class="icon-btn-md3 highlight" onclick="openDuelPanel()" id="duel-btn" style="display:none"><span class="btn-icon">⚔️</span><span class="btn-label">Дуэль</span></button>
+        <button class="icon-btn-md3" onclick="openRating()"><span class="btn-icon">🏆</span><span class="btn-label">Рейтинг</span></button>
+        <button class="icon-btn-md3" onclick="openConsole()"><span class="btn-icon">⚙️</span></button>
+      </div>
+    </div>
+    <div class="topbar-row2">
+      <button class="mode-chip" data-mode="easy" onclick="setMode('easy')">😌 Easy</button>
+      <button class="mode-chip active" data-mode="medium" onclick="setMode('medium')">😤 Medium</button>
+      <button class="mode-chip" data-mode="ultra" onclick="setMode('ultra')">🔥 ULTRA</button>
+      <div id="streak-badge">🔥 <span id="streak-count">0</span> streak!</div>
+      <div id="duel-mode-badge">⚔️ ДУЭЛЬ</div>
+    </div>
+  </header>
+
+  <!-- 🆕 KILLER FEATURE 1: FURY METER -->
+  <div id="fury-bar">
+    <div class="fury-label">FURY</div>
+    <div class="fury-track"><div class="fury-fill" id="fury-fill"></div></div>
+    <div class="fury-emoji" id="fury-emoji">😶</div>
+    <div class="fury-level" id="fury-level">0%</div>
+  </div>
+
+  <!-- DUEL BAR -->
+  <div id="duel-bar">
+    <div class="duel-row1">
+      <div class="duel-title-bar">⚔ ДУЭЛЬ ИДЁТ</div>
+      <div class="duel-clock" id="duel-timer-display">--:--</div>
+    </div>
+    <div class="duel-players">
+      <div class="duel-player">
+        <div class="duel-name" id="dp-me-name" style="color:var(--md-primary)">Ты</div>
+        <div class="duel-wpm-val" id="dp-me-wpm">0</div>
+        <div class="duel-stat-sm" id="dp-me-stats">0 слов</div>
+      </div>
+      <div class="duel-vs-badge">VS</div>
+      <div class="duel-player">
+        <div class="duel-name" id="dp-opp-name" style="color:#a0a8ff">Оппонент</div>
+        <div class="duel-wpm-val" id="dp-opp-wpm" style="color:#a0a8ff">0</div>
+        <div class="duel-stat-sm" id="dp-opp-stats">0 слов</div>
+      </div>
+    </div>
+    <div class="duel-progress-bar"><div class="duel-progress-fill" id="duel-time-bar" style="width:100%"></div></div>
+    <div class="duel-violation-txt" id="duel-violations-display"></div>
+  </div>
+
+  <div id="chat-messages" style="position:relative">
+    <!-- 🆕 KILLER FEATURE 2: BOT REACTION PREVIEW -->
+    <div id="bot-reaction"></div>
+  </div>
+
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="Напиши что-нибудь... (Enter — отправить)" autocomplete="off">
+    <button id="send-btn" onclick="sendMessage()" title="Отправить (Enter)">➤</button>
+  </div>
+</div>
+
+<!-- ====================================================
+     PROFILE PANEL (MY PROFILE)
+==================================================== -->
+<div class="overlay hidden" id="profile-overlay" onclick="closeOverlay('profile-overlay',event)">
+  <div class="md3-panel">
+    <div class="panel-topbar">
+      <div class="panel-headline">Мой профиль</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-sm tonal" id="p-edit-btn" onclick="toggleProfileEdit()">✏️ Изменить</button>
+        <button class="panel-close-btn" onclick="closeOverlay('profile-overlay')">✕</button>
+      </div>
+    </div>
+    <div class="panel-body">
+
+      <!-- AVATAR -->
+      <div class="avatar-upload-wrap">
+        <div class="avatar-big" id="p-avatar-big" onclick="triggerAvatarUpload()">
+          <span id="p-avatar-letter"></span>
+          <div class="avatar-edit-hint">📷</div>
+        </div>
+        <input type="file" id="avatar-file-input" accept="image/*" onchange="handleAvatarUpload(event)">
+        <div style="font-size:11px;color:var(--md-on-surface-variant)" id="p-avatar-hint">Нажми чтобы сменить фото</div>
+      </div>
+
+      <div class="nick-hero" id="p-nick"></div>
+      <div class="nick-badge-wrap"><span class="nick-badge" id="p-badge"></span></div>
+      <div class="nick-rank" id="p-rank"></div>
+
+      <!-- VIEW MODE: bio + socials -->
+      <div id="p-view-mode">
+        <div id="p-bio-wrap" style="margin-bottom:12px">
+          <div class="panel-section" style="margin-bottom:6px">О себе</div>
+          <div class="bio-text" id="p-bio-display"></div>
+        </div>
+        <div id="p-socials-wrap">
+          <div class="panel-section" style="margin-bottom:6px">Соцсети</div>
+          <div class="socials-row" id="p-socials-display"></div>
+        </div>
+        <div class="panel-divider" style="margin-top:14px"></div>
+      </div>
+
+      <!-- EDIT MODE -->
+      <div id="p-edit-mode" style="display:none">
+        <div class="panel-section" style="margin-top:4px;margin-bottom:8px">Редактировать профиль</div>
+        <div class="md3-field">
+          <label class="md3-field-label">О себе</label>
+          <textarea class="md3-input" id="p-bio-input" maxlength="160" rows="3"
+            placeholder="Расскажи о себе (макс. 160 символов)..."
+            style="resize:none;line-height:1.5"></textarea>
+          <div style="font-size:10px;color:var(--md-on-surface-variant);margin-top:4px;text-align:right" id="p-bio-count">0/160</div>
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">Telegram (без @)</label>
+          <input class="md3-input" id="p-tg-input" type="text" maxlength="40" placeholder="username">
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">VK (ссылка или id)</label>
+          <input class="md3-input" id="p-vk-input" type="text" maxlength="60" placeholder="vk.com/id или просто id">
+        </div>
+        <div class="md3-field">
+          <label class="md3-field-label">Discord (тег)</label>
+          <input class="md3-input" id="p-dc-input" type="text" maxlength="40" placeholder="username#0000">
+        </div>
+        <button class="btn-filled" onclick="saveProfileEdit()" style="margin-bottom:8px">СОХРАНИТЬ</button>
+        <button class="btn-outlined" onclick="toggleProfileEdit()" style="margin-top:0">ОТМЕНА</button>
+        <div class="panel-divider" style="margin-top:14px"></div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val gold" id="p-rating">100</div><div class="stat-label">РЕЙТИНГ</div></div>
+        <div class="stat-card"><div class="stat-val" id="p-wpm">—</div><div class="stat-label">ЛУЧШИЙ WPM</div></div>
+        <div class="stat-card"><div class="stat-val" id="p-words">0</div><div class="stat-label">СЛОВ</div></div>
+        <div class="stat-card"><div class="stat-val" id="p-msgs">0</div><div class="stat-label">СООБЩЕНИЙ</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val green" id="p-duels-w">0</div><div class="stat-label">ПОБЕД</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--md-error)" id="p-duels-l">0</div><div class="stat-label">ПОРАЖЕНИЙ</div></div>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-section">Достижения</div>
+      <div class="achieve-list" id="p-achieves"></div>
+      <div class="panel-divider"></div>
+      <button class="btn-outlined" style="color:var(--md-error);border-color:rgba(255,100,100,0.3)" onclick="doLogout()">Выйти</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     VIEWER PROFILE OVERLAY (чужой профиль)
+==================================================== -->
+<div class="overlay hidden" id="viewer-overlay" onclick="closeOverlay('viewer-overlay',event)">
+  <div class="md3-panel" id="viewer-overlay">
+    <div class="panel-topbar">
+      <div class="panel-headline" id="vp-headline">Профиль</div>
+      <button class="panel-close-btn" onclick="closeOverlay('viewer-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="viewer-avatar-wrap">
+        <div class="viewer-avatar-big" id="vp-avatar">
+          <span id="vp-avatar-letter"></span>
+        </div>
+      </div>
+      <div class="nick-hero" id="vp-nick" style="text-align:center"></div>
+      <div class="nick-badge-wrap"><span class="nick-badge" id="vp-badge"></span></div>
+      <div class="nick-rank" id="vp-rank"></div>
+
+      <div id="vp-bio-wrap" style="margin-bottom:12px;display:none">
+        <div class="panel-section" style="margin-bottom:6px">О себе</div>
+        <div class="bio-text" id="vp-bio"></div>
+      </div>
+      <div id="vp-socials-wrap" style="display:none">
+        <div class="panel-section" style="margin-bottom:6px">Соцсети</div>
+        <div class="socials-row" id="vp-socials"></div>
+      </div>
+      <div class="panel-divider"></div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val gold" id="vp-rating">—</div><div class="stat-label">РЕЙТИНГ</div></div>
+        <div class="stat-card"><div class="stat-val" id="vp-wpm">—</div><div class="stat-label">ЛУЧШИЙ WPM</div></div>
+        <div class="stat-card"><div class="stat-val" id="vp-words">0</div><div class="stat-label">СЛОВ</div></div>
+        <div class="stat-card"><div class="stat-val" id="vp-msgs">0</div><div class="stat-label">СООБЩЕНИЙ</div></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val green" id="vp-wins">0</div><div class="stat-label">ПОБЕД</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--md-error)" id="vp-losses">0</div><div class="stat-label">ПОРАЖЕНИЙ</div></div>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-section">Достижения</div>
+      <div class="achieve-list" id="vp-achieves"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     DUEL PANEL
+==================================================== -->
+<div class="overlay hidden" id="duel-overlay" onclick="closeOverlay('duel-overlay',event)">
+  <div class="md3-panel">
+    <div class="panel-topbar">
+      <div class="panel-headline">⚔️ Дуэль</div>
+      <button class="panel-close-btn" onclick="closeOverlay('duel-overlay')">✕</button>
+    </div>
+    <div class="md3-tabs" style="margin: 0 0 0">
+      <button class="md3-tab active" data-tab="create" onclick="switchDuelTab('create')">Создать</button>
+      <button class="md3-tab" data-tab="join" onclick="switchDuelTab('join')">Войти по коду</button>
+    </div>
+    <div class="panel-body">
+      <!-- CREATE -->
+      <div id="duel-tab-create">
+        <div class="panel-section">Время раунда</div>
+        <div class="time-grid">
+          <div class="time-card active" data-seconds="60" onclick="selectDuelTime(this)"><div class="time-card-val">1</div><div class="time-card-label">МИНУТА</div></div>
+          <div class="time-card" data-seconds="300" onclick="selectDuelTime(this)"><div class="time-card-val">5</div><div class="time-card-label">МИНУТ</div></div>
+          <div class="time-card" data-seconds="600" onclick="selectDuelTime(this)"><div class="time-card-val">10</div><div class="time-card-label">МИНУТ</div></div>
+          <div class="time-card" data-seconds="1800" onclick="selectDuelTime(this)"><div class="time-card-val">30</div><div class="time-card-label">МИНУТ</div></div>
+        </div>
+        <div class="panel-section">Правила</div>
+        <div class="toggle-row">
+          <span class="toggle-label">🚫 Анти-копипаст</span>
+          <div class="md3-toggle on" id="d-anticopy" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">🔁 Анти-повтор</span>
+          <div class="md3-toggle on" id="d-antirepeat" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">🇷🇺 Только русский</span>
+          <div class="md3-toggle on" id="d-ruonly" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="toggle-row" style="border:none">
+          <span class="toggle-label">⚡ Режим карателя</span>
+          <div class="md3-toggle" id="d-punisher" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="stakes-row">
+          <span class="setting-label" style="font-size:13px">⚡ Ставка рейтинга</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input class="stakes-input" type="number" id="d-stakes" value="20" min="5" max="200">
+            <span style="font-size:12px;color:var(--gold)">очков</span>
+          </div>
+        </div>
+        <div class="panel-divider"></div>
+        <button class="btn-filled" onclick="createLobby()">СОЗДАТЬ ЛОББИ</button>
+        <!-- Waiting state -->
+        <div id="lobby-waiting" style="display:none;margin-top:20px">
+          <div style="text-align:center">
+            <div style="font-size:11px;color:var(--md-on-surface-variant);letter-spacing:2px;margin-bottom:8px">КОД ЛОББИ</div>
+            <div class="lobby-code" id="lobby-code-display"></div>
+            <div style="font-size:12px;color:var(--md-on-surface-variant);margin-bottom:16px">Скинь этот код другу</div>
+          </div>
+          <button class="btn-tonal" onclick="copyLobbyCode()">📋 Скопировать код</button>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--md-surface-2);border:1px solid var(--md-outline-variant);border-radius:var(--shape-large);margin-top:10px">
+            <div class="status-dot"></div>
+            <span style="font-size:13px;color:var(--md-on-surface-variant)" id="lobby-status-text">Ждём соперника...</span>
+          </div>
+          <button class="btn-outlined" style="margin-top:10px;color:var(--md-error);border-color:rgba(255,100,100,0.3)" onclick="cancelLobby()">Отменить лобби</button>
+        </div>
+      </div>
+      <!-- JOIN -->
+      <div id="duel-tab-join" style="display:none">
+        <p style="color:var(--md-on-surface-variant);font-size:13px;line-height:1.65;margin-bottom:20px">Введи 6-значный код лобби от друга.</p>
+        <div class="md3-field">
+          <label class="md3-field-label">Код лобби</label>
+          <input class="md3-input" id="join-code-input" type="text" maxlength="6" placeholder="XXXXXX"
+            style="font-family:var(--font-mono);font-size:26px;font-weight:700;letter-spacing:8px;text-align:center;text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="field-error" id="join-error"></div>
+        <button class="btn-filled" style="margin-top:8px" onclick="joinLobby()">ВОЙТИ В ЛОББИ</button>
+        <div id="join-lobby-preview" style="display:none;margin-top:16px">
+          <div style="padding:16px;background:rgba(255,179,179,0.08);border:1px solid rgba(255,179,179,0.2);border-radius:var(--shape-extra-large)">
+            <div style="font-size:14px;font-weight:700;color:var(--md-primary);margin-bottom:10px">⚔️ Лобби найдено!</div>
+            <div id="join-lobby-info" style="font-size:13px;color:var(--md-on-surface-variant);line-height:1.8"></div>
+            <button class="btn-filled" style="margin-top:14px" onclick="confirmJoinLobby()">ПРИНЯТЬ ДУЭЛЬ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     RATING PANEL
+==================================================== -->
+<div class="overlay hidden" id="rating-overlay" onclick="closeOverlay('rating-overlay',event)">
+  <div class="md3-panel">
+    <div class="panel-topbar">
+      <div class="panel-headline">🏆 Рейтинг</div>
+      <button class="panel-close-btn" onclick="closeOverlay('rating-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="rating-list" id="rating-list">
+        <div style="color:var(--md-on-surface-variant);font-size:13px;padding:10px 0">Загрузка...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     WPM PANEL
+==================================================== -->
+<div class="overlay hidden" id="skill-overlay" onclick="closeOverlay('skill-overlay',event)">
+  <div class="md3-panel">
+    <div class="panel-topbar">
+      <div class="panel-headline">⌨️ WPM Тест</div>
+      <button class="panel-close-btn" onclick="closeOverlay('skill-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <p style="color:var(--md-on-surface-variant);font-size:13px;line-height:1.65;margin-bottom:16px">
+        Выбери длительность и жми СТАРТ. Пиши в чат — бот считает слова. Напиши «стоп» для результата.
+      </p>
+      <div class="timer-pills">
+        <div class="timer-pill active" data-s="60" onclick="selectTimer(this)">1 МИН</div>
+        <div class="timer-pill" data-s="300" onclick="selectTimer(this)">5 МИН</div>
+        <div class="timer-pill" data-s="600" onclick="selectTimer(this)">10 МИН</div>
+      </div>
+      <button class="btn-filled" onclick="startSkill()">СТАРТ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     CONSOLE PANEL
+==================================================== -->
+<div class="overlay hidden" id="console-overlay" onclick="closeOverlay('console-overlay',event)">
+  <div class="md3-panel">
+    <div class="panel-topbar">
+      <div class="panel-headline">⚙️ Консоль</div>
+      <button class="panel-close-btn" onclick="closeOverlay('console-overlay')">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="panel-section">Настройки бота</div>
+      <div class="setting-row">
+        <span class="setting-label">Сила текста</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" id="c-strength" min="1" max="10" oninput="document.getElementById('c-strength-val').textContent=this.value">
+          <span class="range-val" id="c-strength-val"></span>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">Фраз за ответ</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" id="c-phrases" min="1" max="50" oninput="document.getElementById('c-phrases-val').textContent=this.value">
+          <span class="range-val" id="c-phrases-val"></span>
+        </div>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-section">Режимы</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Режим карателя</span>
+        <div class="md3-toggle" id="t-punisher" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Анти-копипаст</span>
+        <div class="md3-toggle" id="t-anticopy" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row" style="border:none">
+        <span class="toggle-label">Анти-повтор</span>
+        <div class="md3-toggle" id="t-antirepeat" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="panel-divider"></div>
+      <button class="btn-filled" onclick="saveConsole()" style="margin-bottom:10px">СОХРАНИТЬ</button>
+      <button class="btn-tonal" onclick="unlockAllAchievements()">ВСЕ ДОСТИЖЕНИЯ</button>
+      <button class="btn-outlined" onclick="resetStats()" style="margin-top:8px">СБРОСИТЬ СТАТИСТИКУ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================
+     DUEL RESULT PANEL
+==================================================== -->
+<div class="overlay hidden" id="result-overlay">
+  <div class="md3-panel" style="max-width:480px">
+    <div class="panel-topbar">
+      <div class="panel-headline">Результат дуэли</div>
+    </div>
+    <div class="panel-body">
+      <div id="duel-result-content"></div>
+      <button class="btn-filled" onclick="closeOverlay('result-overlay')">ЗАКРЫТЬ</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="orient-toast"></div>
+<div id="achieve-toast"></div>
+<div id="notif-toast"><div class="notif-title" id="notif-title"></div><div class="notif-body" id="notif-body"></div></div>
+
+<!-- 🆕 KILLER FEATURE 5: SHORTCUT HUD -->
+<div id="shortcut-hud">
+  <div class="shortcut-item"><div class="shortcut-key">Tab</div><div class="shortcut-desc">Режимы</div></div>
+  <div class="shortcut-item"><div class="shortcut-key">Ctrl+K</div><div class="shortcut-desc">Консоль</div></div>
+  <div class="shortcut-item"><div class="shortcut-key">Ctrl+D</div><div class="shortcut-desc">Дуэль</div></div>
+  <div class="shortcut-item"><div class="shortcut-key">Esc</div><div class="shortcut-desc">Закрыть</div></div>
+</div>
+
+<script type="module">
+/* ============================================================
+   FIREBASE INIT
+============================================================ */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getDatabase, ref, set, get, onValue, off, push, remove, onDisconnect, update }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCjGeYuaGYA1n4TZMsYI4HtjDSsT8MytdE",
+  authDomain: "trollbotv2-84c05.firebaseapp.com",
+  databaseURL: "https://trollbotv2-84c05-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "trollbotv2-84c05",
+  storageBucket: "trollbotv2-84c05.firebasestorage.app",
+  messagingSenderId: "1068077411060",
+  appId: "1:1068077411060:web:3ef085ddc33968abb64ca1"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const rtdb = getDatabase(app);
+
+window._fb = { auth, db, rtdb,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs, serverTimestamp,
+  ref, set, get, onValue, off, push, remove, onDisconnect, update };
+
+/* ============================================================
+   SPLASH SCREEN
+============================================================ */
+function dismissSplash() {
+  const s = document.getElementById('splash-screen');
+  s.classList.add('exit');
+  setTimeout(() => {
+    s.classList.add('gone');
+    document.getElementById('auth-screen').classList.remove('hidden');
+  }, 600);
+}
+window.dismissSplash = dismissSplash;
+
+/* ============================================================
+   PHRASES
+============================================================ */
+const dumbPhrases = ["ты еблан?","сосо пж","сын шлюхи","мда чел","поплачь","слит","ну ты и лох","шалом,сори","УДАЛЮ СЕБЕ ИНТЕРНЕТ","удали интернет","ыыыы","Алга Казахстан","ещемы котакбас"];
+const phrases = [
+  "пиздорванка ебанная ты долго будешь хуй ебаря игнорировать",
+  "я тебе щас ебало твое изуродую ты хавальник то на моем хую не откинь",
+  "плебей ебаный который понюхает акселераторовской залупы",
+  "тебе не выжить то с твоими силами манямирняк слаборожденный плебейный",
+  "тебе здесь мамашу выебали терпилизованный блядоид фригидный",
+  "я буду мамашу твою ебалировать пока ты не поймешь что я буду сильнее тебя",
+  "дочерь шлюхи ты слабая я в Варшаве мамашу твою прирезал",
+  "я кости твоей матери переломаю потому что она куртизанка ебанная недееспособная",
+  "я тебе щас твои сосиски сломаю чтобы ты перестала говновысеры свои печатать",
+  "отсосник ебанный ты давай напрягай свою пятую точку",
+  "мой пипидастр щас будет бурить твой шоколадный глаз",
+  "сучечка ты ебанная не смей огрызаться только я трахну тебя",
+  "фекалийная паркинсоновская рексина черноеблая которая будет мое хуище отсасывать",
+  "сбавь свои обороты иначе я оборот ебальника твоего отца сделаю на триста шестьдесят градусов",
+  "китаеза ты ебаная бабская клешнявая тентаклями мамашу твою ебу",
+  "жертва инцеста чисто сынище шлюхи ты этиловое небоеспособное",
+  "я буду глазные яблоки твоей матери вырезать поняла меня дурочка ебаная",
+  "тощий сын утробной шлюхи давай не тяни мое время я буду тебе сосало твоё ломать",
+  "это малая часть на которую способна аннигиляционная нация вместе с гриндинг оф металлом",
+  "я тебе вовсе твое сосалово переломаю ты че сопляк ебаный желтый",
+  "жуй хуй мой слышала меня дегенератка телочная трипперная",
+  "тебе не выжить против моего агрегата я буду твое сосалово трахать постоянно",
+  "почему ты сын шлюхи молчишь слышишь меня я не буду тебя сидеть терпеть",
+  "я буду тебе мочить твой еблет деградированный обосраный",
+  "дочь фемцелки ебаная которая умрет здесь в одно рыло",
+  "тебя ебал и твою мамашу тоже ржачная дочь шлюхи ебучая",
+  "цилиндровая сыночек шлюхи ебаный свинячий я тебе щас твои фаланги переломаю",
+  "гейская шалава нет ты ребенок сво ебучий почему терпеть начала",
+  "я тебе щас ебало сломаю пошла нахуй отсюда",
+  "я буду сидеть да харчины тебе на еблище накидывать",
+  "ты не достойна на красивую и удачную жизнь ебаная поебанная неудачница",
+  "ты скоро будешь от оргазма отходить ебучая сынишка бляди медленная",
+  "желтозубая сынина шалавы умиротворенная ты никому не интересная",
+  "я буду ебать твое сосалище до конца твоих гребаных дней",
+  "для тебя не будет никакой пощады потому что перед тобой усовершенствованный убийца",
+  "акселератор желтозубая ребетня шлюхи ебучая я тебе щас твое стойло обхаркаю",
+  "спасай зад свой я буду входить в тебя и кончать мощно и быстро",
+  "дегенеративная сопляжуйка ты никому неинтересная у тебя нет никаких шансов",
+  "я буду рвать твой клитор поняла меня потужница ебучая слабая",
+  "ай маму тебе ебал плебей ебучий ты почему хуй начал сосать этиловый сынок шалавенции",
+  "медленный сынок шлюхи опустевший руки свои понимаешь нет",
+  "я тебе щас ебальник твой переломаю за игнорирование моего хуища великого",
+  "ты полностью дерганная понтовая детина дерьма ебаная",
+  "не сможешь пережить нападки на твою жопу голую сучечка домашняя",
+  "сын шлюхи не помри на залупе акселератора ебаря ты понимаешь нет",
+  "твоя ситуация тупиковая единственное что тебе осталось это совершить харакири",
+  "я не перестану твое пездло ломать ты нуклеиновый ребенок шалавы",
+  "я буду ебать твою мамашу шлюхи до конца дней ее сладких",
+  "потужная детина говнины ебучая я не могу не выбить тебе зубы",
+  "сосальный ребенок дерьма пошла шланг мой сосать в быстром темпе на спринте",
+  "разлагающаяся детини губки ебаная закрыла ебальник дочь шлюхи",
+  "иначе тебе не выжить вовсе в данной конференции в которой ты по ебальнику получаешь",
+  "плебей ебаный неизвестный сраный я буду тебя в сраказахстнн отправлять лизать толканы",
+  "соси мой хуй в спешке сынок шлюхи я мамашу тебе ебал",
+  "выкидная сынина шлюхи щас твою мамашу раскромсаю как настоящий мясник",
+  "слыш ребенок говна ты почему отсасывать начала",
+  "это малая часть моих харчей которые тебя ждут впереди ты ребенок дерьма ебучий",
+  "почему сразу нахуй пошла молча мой хуй сосать так неинтересно",
+  "ты ребенок дерьма который разве что сосать может потому что ты ребенок шлюхи",
+  "деградированный не проснешься после этого ребенок гиены ебучая",
+  "ты слабая недоразвитая дочерь шлюхи ты только тут патлы свои не откинь",
+  "я тебе буду твою головенку разбивать об асфальт ты поняла конвульсивная детина",
+  "я буду кагунями мамашу твою на молекулы разбирать епта я сам канеки кен",
+  "ты щас помираешь здесь чисто заживо гниешь понимай это с легкостью",
+  "это твои последние минуты я тебе щас попросту твою сосальню переебу",
+  "из за моего хуя асфиксию словишь поняла дочка шлюхи ебучая",
+  "я буду бурить дырку твоей матери шлюхи которая далась мне",
+  "тебе не выжить против акселераторовской мощи ты подписал себе приговор",
+  "тебя сынка шлюхи обоссали уже все на этой планете и знаешь куда тебя это привело конечно же ко мне","я тебе здесь за щеку буду давать а ты сучка заднеприводная будешь терпеть","я тебе здесь никак не дам фору ты будешь всегда сзади","давай нахуй расскажи историю о твое отце который уксус выпил","я начну клюшкой пиздить твою матерь вместо тебя","ведь мамаша тебе шалава такая не может тебя побаловать купить тебе мармеладных червячков","ты придурок или что ты с кишками наружи будешь ползати до песочницы от меня","тем временем в моих руках пистолет делаю выстрел в корпус тело дохлый перец","я маму твою ебу ты мертвый сын шлюхи на твою могилу нассали","екей тебе даже жизни после смерти не дают","давай хачина ебучая начинай выдавливать из себя эмоции","докинь здесь еще парочку своих ненужных нахуй текстов","я тебе здесь стойло сломаю ты будешь сидеть и плакать терпила ебучая","думаешь против меня работают тактики но я никак не контрюсь","я буду вырывать с корнями ноги твоей матери а так же твои желтые зубы","ты немытый защеканец почему ты пылесос ебучий не можешь хуй мой вытащить из своего рта","нахуй бездарь ты таракановый жирный никому не известный в этом мире","я голыми руками вытащу твои легкие наружу терпила ты гойская начленная","тебе не выжить против пениса моего ебучий пиксельный отрафированный рекс","тебе положено гавкать на четырестадвадцатого ебаря который как физически так и морально убьет любую сошку","которая попытается дать мне какой-либо отпор по вашему же мнению медленный терпила","ты там долго будешь поедать калл или что я тебе ебальник тут сломаю","ты не способен дальше разговаривать я привел тебя в состояние шока","после пару лоукиков по голове ты костлявый пидарас","Алга Казахстан","ещемы котакбас"
+];
+
+/* ============================================================
+   SPECIAL TITLES
+============================================================ */
+const SPECIAL_USERNAMES = [
+  { id: 'legend', name: 'ЛЕГЕНДА', desc: 'Редкий. Для избранных.', label: 'LEGEND', css: 'background:rgba(224,192,96,0.2);color:var(--gold);border:1px solid rgba(224,192,96,0.4)' },
+  { id: 'elite', name: 'ЭЛИТА', desc: 'Высший класс.', label: 'ELITE', css: 'background:rgba(180,0,220,0.2);color:#e040fb;border:1px solid rgba(180,0,220,0.4)' },
+  { id: 'ghost', name: 'ПРИЗРАК', desc: 'Тихий, но опасный.', label: 'GHOST', css: 'background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.2)' },
+  { id: 'troll', name: 'ТРОЛЛЬ', desc: 'Создан для этого.', label: 'TROLL', css: 'background:rgba(255,179,179,0.15);color:var(--md-primary);border:1px solid rgba(255,179,179,0.4)' },
+  { id: 'rookie', name: 'НОВИЧОК', desc: 'Ещё учится.', label: 'ROOKIE', css: 'background:rgba(109,191,139,0.15);color:var(--green);border:1px solid rgba(109,191,139,0.4)' },
+  { id: 'anon', name: 'АНОНИМ', desc: 'Без лица.', label: 'ANON', css: 'background:rgba(100,100,100,0.15);color:#aaa;border:1px solid rgba(100,100,100,0.4)' },
+];
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentUser = null;
+let currentMode = 'medium';
+let userMessageCount = 0;
+const USED_STORAGE_MAP = { easy: new Set(), medium: new Set(), ultra: new Set() };
+const MAX_HISTORY = 40;
+let botMessages = [];
+let userMessages = [];
+let punisherMode = false;
+const REPEAT_THRESHOLD = 3;
+let totalWords = 0, totalChars = 0, bestWPM = 0;
+let achievements = new Set();
+let isBanned = false, banTimer = null;
+let strength = 5, phrasesPerResponse = 2;
+let disablePunisher = false, disableAntiCopy = false, disableAntiRepeat = false;
+let skillTimer = null, skillStart = 0, skillSeconds = 60, skillText = '';
+let selectedTitle = 'rookie';
+
+// 🆕 KILLER FEATURE 1: Fury meter state
+let furyLevel = 0; // 0-100
+let furyDecayTimer = null;
+
+// 🆕 KILLER FEATURE 3: Streak state
+let currentStreak = 0; // consecutive messages without bans
+let streakTimer = null;
+
+// 🆕 KILLER FEATURE 4: Bot mood state
+let botMood = 'neutral'; // neutral, annoyed, angry, enraged, amused
+
+// DUEL STATE
+let duelActive = false;
+let duelSettings = { seconds: 60, antiCopy: true, antiRepeat: true, ruOnly: true, punisher: false, stakes: 20 };
+let duelOpponent = null;
+let duelTimer = null;
+let duelTimeLeft = 0;
+let duelMyWords = 0, duelMyChars = 0, duelMyMsgs = 0;
+let duelOppWords = 0, duelOppChars = 0, duelOppMsgs = 0;
+let duelMyViolations = 0;
+let duelStart = 0;
+let duelRoomId = null, duelRoomRef = null;
+let lobbyCode = null, lobbyListenerRef = null;
+let duelListenerRef = null;
+let pendingJoinData = null;
+
+const ALL_ACHIEVEMENTS = [
+  { id: 'first_msg', name: 'Первый шаг', desc: 'Отправить первое сообщение', icon: '👣' },
+  { id: '10_msgs', name: 'Разогрев', desc: 'Отправить 10 сообщений', icon: '🔥' },
+  { id: 'ultra_survivor', name: 'Выживший в ультра', desc: '5 сообщений в режиме ULTRA', icon: '💀' },
+  { id: 'speed_demon', name: 'Скорострел', desc: 'Достичь 60 слов/мин', icon: '⚡' },
+  { id: 'marathon', name: 'Марафонец', desc: 'Написать 1000 символов', icon: '🏃' },
+  { id: 'copycat', name: 'Копиатор', desc: 'Скопировать фразу бота', icon: '📋' },
+  { id: 'repeater', name: 'Повторюшка', desc: 'Повторить сообщение 3+ раз', icon: '🔁' },
+  { id: 'peace_maker', name: 'Миротворец', desc: 'Ввести пасхалку на извинения', icon: '🕊️' },
+  { id: 'word_master', name: 'Мастер слов', desc: 'Написать 500 слов всего', icon: '✍️' },
+  { id: 'duel_winner', name: 'Победитель', desc: 'Выиграть первую дуэль', icon: '⚔️' },
+  { id: 'duel_streak', name: 'Доминатор', desc: 'Выиграть 3 дуэли подряд', icon: '👑' },
+  { id: 'high_wpm', name: 'Молния', desc: 'Набрать 80+ WPM', icon: '🌩️' },
+  { id: 'fury_max', name: 'Разжёг ад', desc: 'Набрать 100% Fury', icon: '🔥' },   // NEW
+  { id: 'streak_10', name: 'Десятка', desc: 'Streak 10 сообщений подряд', icon: '🎯' }, // NEW
+];
+
+/* ============================================================
+   🆕 KILLER FEATURE 1: FURY METER
+============================================================ */
+const FURY_EMOJIS = ['😶','😑','😒','😠','😤','😡','🤬','💢','👹','🔥'];
+function updateFuryMeter(delta) {
+  furyLevel = Math.max(0, Math.min(100, furyLevel + delta));
+  const fill = document.getElementById('fury-fill');
+  const emoji = document.getElementById('fury-emoji');
+  const level = document.getElementById('fury-level');
+  if (!fill) return;
+  fill.style.width = furyLevel + '%';
+  level.textContent = Math.round(furyLevel) + '%';
+  const idx = Math.min(9, Math.floor(furyLevel / 10));
+  emoji.textContent = FURY_EMOJIS[idx];
+  // Scale emoji on high fury
+  emoji.style.transform = furyLevel > 80 ? `scale(${1 + (furyLevel-80)*0.015}) rotate(${Math.sin(Date.now()/200)*3}deg)` : 'scale(1)';
+  if (furyLevel >= 100) {
+    checkAchievement('fury_max');
+    showNotif('🔥 FURY MAX!', 'Ты разжёг настоящий ад!');
+  }
+  // Auto-decay fury
+  clearTimeout(furyDecayTimer);
+  furyDecayTimer = setTimeout(() => {
+    if (furyLevel > 0) { furyLevel = Math.max(0, furyLevel - 5); updateFuryMeter(0); }
+  }, 3000);
+}
+
+/* ============================================================
+   🆕 KILLER FEATURE 2: BOT REACTION PREVIEW
+============================================================ */
+let reactionTimer = null;
+function showBotReaction(text, emoji = '🤖') {
+  const el = document.getElementById('bot-reaction');
+  if (!el) return;
+  el.innerHTML = `<span>${emoji}</span> ${text}`;
+  el.classList.add('show');
+  clearTimeout(reactionTimer);
+  reactionTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+/* ============================================================
+   🆕 KILLER FEATURE 3: STREAK COUNTER
+============================================================ */
+function incrementStreak() {
+  currentStreak++;
+  const badge = document.getElementById('streak-badge');
+  const count = document.getElementById('streak-count');
+  if (currentStreak >= 3) {
+    badge.classList.add('show');
+    count.textContent = currentStreak;
+    if (currentStreak >= 10) checkAchievement('streak_10');
+  }
+  // Reset streak after 10 seconds of inactivity
+  clearTimeout(streakTimer);
+  streakTimer = setTimeout(() => {
+    currentStreak = 0;
+    document.getElementById('streak-badge').classList.remove('show');
+  }, 10000);
+}
+function resetStreak() {
+  currentStreak = 0;
+  clearTimeout(streakTimer);
+  document.getElementById('streak-badge').classList.remove('show');
+}
+
+/* ============================================================
+   🆕 KILLER FEATURE 4: BOT MOOD
+============================================================ */
+function updateBotMood() {
+  if (furyLevel < 20) botMood = 'neutral';
+  else if (furyLevel < 40) botMood = 'annoyed';
+  else if (furyLevel < 60) botMood = 'angry';
+  else if (furyLevel < 80) botMood = 'enraged';
+  else botMood = 'amused'; // bot is having fun at max fury
+
+  const reactions = {
+    neutral: ['🤖 Обрабатываю...', '🤖 Думаю...'],
+    annoyed: ['😒 Надоел...', '😒 Серьёзно?'],
+    angry: ['😡 ТЫ ДОСТАЛ!', '😡 Получи!'],
+    enraged: ['🤬 ХВАТИТ!', '🤬 УНИЧТОЖУ!'],
+    amused: ['😈 Хааха! Давай ещё!', '😈 Развлекаешь!'],
+  };
+  const list = reactions[botMood];
+  showBotReaction(list[Math.floor(Math.random() * list.length)]);
+}
+
+/* ============================================================
+   🆕 KILLER FEATURE 5: KEYBOARD SHORTCUTS
+============================================================ */
+let shortcutHudVisible = false;
+document.addEventListener('keydown', e => {
+  // Ctrl+K → Console
+  if (e.ctrlKey && e.key === 'k') { e.preventDefault(); openConsole(); return; }
+  // Ctrl+D → Duel
+  if (e.ctrlKey && e.key === 'd') { e.preventDefault(); openDuelPanel(); return; }
+  // Tab → cycle modes (when not in input)
+  if (e.key === 'Tab' && document.activeElement !== document.getElementById('user-input')) {
+    e.preventDefault();
+    const modes = ['easy','medium','ultra'];
+    const next = modes[(modes.indexOf(currentMode) + 1) % modes.length];
+    setMode(next);
+    return;
+  }
+  // Esc → close any open overlay
+  if (e.key === 'Escape') {
+    ['profile-overlay','viewer-overlay','duel-overlay','rating-overlay','skill-overlay','console-overlay','result-overlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+    });
+    return;
+  }
+  // ? → show shortcut HUD
+  if (e.key === '?' && document.activeElement !== document.getElementById('user-input')) {
+    e.preventDefault();
+    shortcutHudVisible = !shortcutHudVisible;
+    document.getElementById('shortcut-hud').classList.toggle('show', shortcutHudVisible);
+    return;
+  }
+  // Hide HUD on any other key
+  if (shortcutHudVisible && e.key !== '?') {
+    shortcutHudVisible = false;
+    document.getElementById('shortcut-hud').classList.remove('show');
+  }
+});
+
+/* ============================================================
+   AUTH SCREEN
+============================================================ */
+function switchAuthTab(tab) {
+  ['login','register','guest'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
+    document.querySelector(`.md3-tab[data-tab="${t}"]`).classList.toggle('active', t === tab);
+  });
+}
+window.switchAuthTab = switchAuthTab;
+
+function buildUsernamePicker() {
+  const grid = document.getElementById('username-grid');
+  grid.innerHTML = SPECIAL_USERNAMES.map(u => `
+    <div class="title-opt ${u.id === selectedTitle ? 'selected' : ''}" onclick="selectTitle('${u.id}', this)">
+      <div class="title-opt-badge" style="${u.css}">${u.label}</div>
+      <div class="title-opt-name">${u.name}</div>
+      <div class="title-opt-desc">${u.desc}</div>
+    </div>
+  `).join('');
+}
+buildUsernamePicker();
+
+function selectTitle(id, el) {
+  selectedTitle = id;
+  document.querySelectorAll('.title-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+window.selectTitle = selectTitle;
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  const btn = document.querySelector('#tab-login .btn-filled');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Заполни все поля'; return; }
+  btn.disabled = true; btn.textContent = 'ВХОДИМ...';
+  try {
+    const cred = await _fb.signInWithEmailAndPassword(_fb.auth, email, pass);
+    const snap = await _fb.getDoc(_fb.doc(_fb.db, 'users', cred.user.uid));
+    if (snap.exists()) {
+      loginUser({ uid: cred.user.uid, ...snap.data() });
+    } else {
+      const nick = email.split('@')[0];
+      const userData = { uid: cred.user.uid, email, nick, title: 'rookie', rating: 100, isGuest: false, totalWords: 0, totalChars: 0, bestWPM: 0, userMessageCount: 0, wins: 0, losses: 0, achievements: [], lastSeen: _fb.serverTimestamp(), online: true };
+      await _fb.setDoc(_fb.doc(_fb.db, 'users', cred.user.uid), userData);
+      loginUser(userData);
+    }
+  } catch(e) {
+    err.textContent = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') ? 'Неверный email или пароль' : 'Ошибка: ' + e.message;
+    btn.disabled = false; btn.textContent = 'ВОЙТИ';
+  }
+}
+window.doLogin = doLogin;
+
+async function doRegister() {
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const nick = document.getElementById('reg-nick').value.trim();
+  const err = document.getElementById('reg-error');
+  const btn = document.querySelector('#tab-register .btn-filled');
+  err.textContent = '';
+  if (!email || !pass || !nick) { err.textContent = 'Заполни все поля'; return; }
+  if (pass.length < 6) { err.textContent = 'Пароль минимум 6 символов'; return; }
+  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { err.textContent = 'Некорректный email'; return; }
+  btn.disabled = true; btn.textContent = 'СОЗДАЁМ...';
+  try {
+    const cred = await _fb.createUserWithEmailAndPassword(_fb.auth, email, pass);
+    const userData = { uid: cred.user.uid, email, nick, title: selectedTitle, rating: 100, isGuest: false, totalWords: 0, totalChars: 0, bestWPM: 0, userMessageCount: 0, wins: 0, losses: 0, achievements: [], lastSeen: _fb.serverTimestamp(), online: true };
+    let written = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try { await _fb.setDoc(_fb.doc(_fb.db, 'users', cred.user.uid), userData); written = true; break; }
+      catch(fsErr) { if (attempt < 3) await new Promise(r => setTimeout(r, 800 * attempt)); }
+    }
+    if (!written) { await cred.user.delete().catch(()=>{}); err.textContent = 'Ошибка сохранения профиля. Попробуй снова.'; btn.disabled = false; btn.textContent = 'СОЗДАТЬ АККАУНТ'; return; }
+    loginUser(userData);
+  } catch(e) {
+    err.textContent = e.code === 'auth/email-already-in-use' ? 'Email уже зарегистрирован. Попробуй войти.' : 'Ошибка: ' + e.message;
+    btn.disabled = false; btn.textContent = 'СОЗДАТЬ АККАУНТ';
+  }
+}
+window.doRegister = doRegister;
+
+function doGuest() {
+  const nick = document.getElementById('guest-nick').value.trim() || 'Аноним';
+  loginUser({ uid: 'guest_' + Date.now(), email: null, nick, title: 'anon', rating: 0, isGuest: true, totalWords: 0, totalChars: 0, bestWPM: 0, userMessageCount: 0, wins: 0, losses: 0, achievements: [] });
+}
+window.doGuest = doGuest;
+
+function loginUser(user) {
+  currentUser = user;
+  totalWords = user.totalWords || 0;
+  totalChars = user.totalChars || 0;
+  bestWPM = user.bestWPM || 0;
+  userMessageCount = user.userMessageCount || 0;
+  achievements = new Set(user.achievements || []);
+
+  document.getElementById('auth-screen').classList.add('hidden');
+  updateHeaderChip();
+
+  if (!user.isGuest && user.uid) {
+    const presenceRef = _fb.ref(_fb.rtdb, `presence/${user.uid}`);
+    _fb.set(presenceRef, { uid: user.uid, nick: user.nick, title: user.title, rating: user.rating || 100, online: true, ts: Date.now() });
+    _fb.onDisconnect(presenceRef).remove();
+  }
+
+  const titleInfo = SPECIAL_USERNAMES.find(u => u.id === user.title) || SPECIAL_USERNAMES[4];
+  addMessage('system', `Добро пожаловать, ${user.nick}! [${titleInfo.label}] · Рейтинг: ${user.rating || 0} · Нажми ? для хоткеев.`);
+  addMessage('bot', `${user.isGuest ? 'Гость' : user.nick}, готовься к страданиям. Режим Medium активирован.`);
+}
+
+function updateHeaderChip() {
+  if (!currentUser) return;
+  const avatarEl = document.getElementById('header-avatar');
+  if (currentUser.avatarDataUrl) {
+    avatarEl.innerHTML = `<img src="${currentUser.avatarDataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    avatarEl.textContent = currentUser.nick[0].toUpperCase();
+  }
+  document.getElementById('header-nick').textContent = currentUser.nick;
+  document.getElementById('header-rating').textContent = currentUser.isGuest ? '' : '⚡' + (currentUser.rating || 100);
+  document.getElementById('duel-btn').style.display = currentUser.isGuest ? 'none' : '';
+}
+
+async function doLogout() {
+  if (currentUser && !currentUser.isGuest) {
+    try { await _fb.updateDoc(_fb.doc(_fb.db, 'users', currentUser.uid), { online: false, lastSeen: _fb.serverTimestamp() }); } catch(e){}
+  }
+  await _fb.signOut(_fb.auth);
+  currentUser = null;
+  furyLevel = 0; updateFuryMeter(0);
+  resetStreak();
+  document.getElementById('profile-overlay').classList.add('hidden');
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+window.doLogout = doLogout;
+
+async function saveUser() {
+  if (!currentUser || currentUser.isGuest) return;
+  currentUser.totalWords = totalWords; currentUser.totalChars = totalChars;
+  currentUser.bestWPM = bestWPM; currentUser.userMessageCount = userMessageCount;
+  currentUser.achievements = [...achievements];
+  try {
+    await _fb.updateDoc(_fb.doc(_fb.db, 'users', currentUser.uid), {
+      totalWords, totalChars, bestWPM, userMessageCount,
+      achievements: [...achievements], rating: currentUser.rating,
+      wins: currentUser.wins || 0, losses: currentUser.losses || 0,
+      lastSeen: _fb.serverTimestamp(),
+    });
+  } catch(e) { console.warn('saveUser error:', e); }
+}
+
+/* ============================================================
+   OVERLAYS
+============================================================ */
+function openOverlay(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeOverlay(id, event) {
+  if (!event || event.target === document.getElementById(id)) {
+    document.getElementById(id).classList.add('hidden');
+  }
+}
+window.openOverlay = openOverlay;
+window.closeOverlay = closeOverlay;
+
+/* ============================================================
+   PROFILE
+============================================================ */
+
+// Helper: render avatar in an element
+function renderAvatar(el, letterEl, user) {
+  if (user.avatarDataUrl) {
+    el.innerHTML = `<img src="${user.avatarDataUrl}" alt="avatar">`;
+  } else {
+    el.innerHTML = `<span>${(user.nick||'?')[0].toUpperCase()}</span>`;
+  }
+}
+
+// Helper: render social links
+function renderSocials(container, user) {
+  const links = [];
+  if (user.tg) links.push({ icon: '✈️', label: `@${user.tg}`, href: `https://t.me/${user.tg}` });
+  if (user.vk) {
+    const vkHref = user.vk.startsWith('http') ? user.vk : `https://vk.com/${user.vk}`;
+    links.push({ icon: '💙', label: user.vk, href: vkHref });
+  }
+  if (user.dc) links.push({ icon: '🎮', label: user.dc, href: null });
+  if (!links.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--md-on-surface-variant);opacity:0.5;padding:6px 0">Не указаны</div>';
+    return;
+  }
+  container.innerHTML = links.map(l => l.href
+    ? `<a class="social-link-item" href="${l.href}" target="_blank"><span class="social-link-icon">${l.icon}</span><span class="social-link-text">${l.label}</span><span style="font-size:12px;opacity:0.5">↗</span></a>`
+    : `<div class="social-link-item"><span class="social-link-icon">${l.icon}</span><span class="social-link-text">${l.label}</span></div>`
+  ).join('');
+}
+
+function openProfile() {
+  if (!currentUser) return;
+  const isHoF = achievements.size === ALL_ACHIEVEMENTS.length;
+  const nick = document.getElementById('p-nick');
+  nick.textContent = currentUser.nick;
+  nick.className = 'nick-hero' + (isHoF ? ' gold' : '');
+  const titleInfo = SPECIAL_USERNAMES.find(u => u.id === currentUser.title) || SPECIAL_USERNAMES[4];
+  document.getElementById('p-badge').textContent = `${titleInfo.label} · ${titleInfo.name}`;
+  document.getElementById('p-badge').style = titleInfo.css;
+  document.getElementById('p-rank').textContent = isHoF ? '🏆 HALL OF FAME' : `TROOPER · ${userMessageCount} СООБЩЕНИЙ`;
+  document.getElementById('p-rating').textContent = currentUser.isGuest ? '—' : (currentUser.rating || 100);
+  document.getElementById('p-wpm').textContent = bestWPM || '—';
+  document.getElementById('p-words').textContent = totalWords;
+  document.getElementById('p-msgs').textContent = userMessageCount;
+  document.getElementById('p-duels-w').textContent = currentUser.wins || 0;
+  document.getElementById('p-duels-l').textContent = currentUser.losses || 0;
+
+  // Avatar
+  const avatarEl = document.getElementById('p-avatar-big');
+  if (currentUser.avatarDataUrl) {
+    avatarEl.innerHTML = `<img src="${currentUser.avatarDataUrl}" alt="avatar"><div class="avatar-edit-hint">📷</div>`;
+  } else {
+    avatarEl.innerHTML = `<span id="p-avatar-letter">${(currentUser.nick||'?')[0].toUpperCase()}</span><div class="avatar-edit-hint">📷</div>`;
+  }
+  if (currentUser.isGuest) {
+    document.getElementById('p-avatar-hint').textContent = 'Аватарки доступны зарегистрированным';
+    avatarEl.style.cursor = 'default';
+  } else {
+    document.getElementById('p-avatar-hint').textContent = 'Нажми чтобы сменить фото';
+    avatarEl.style.cursor = 'pointer';
+  }
+
+  // Bio
+  const bioDisplay = document.getElementById('p-bio-display');
+  if (currentUser.bio) {
+    bioDisplay.textContent = currentUser.bio;
+    bioDisplay.classList.remove('bio-empty');
+  } else {
+    bioDisplay.textContent = 'Нет описания';
+    bioDisplay.classList.add('bio-empty');
+  }
+
+  // Socials
+  renderSocials(document.getElementById('p-socials-display'), currentUser);
+
+  // Achievements
+  const list = document.getElementById('p-achieves');
+  list.innerHTML = ALL_ACHIEVEMENTS.map(a => {
+    const has = achievements.has(a.id);
+    return `<div class="achieve-item ${has ? 'earned' : ''}">
+      <div class="achieve-icon">${has ? a.icon : '🔒'}</div>
+      <div><div class="achieve-name" style="${has ? '' : 'opacity:0.4'}">${a.name}</div><div class="achieve-desc">${a.desc}</div></div>
+    </div>`;
+  }).join('');
+
+  // reset edit mode
+  document.getElementById('p-edit-mode').style.display = 'none';
+  document.getElementById('p-view-mode').style.display = '';
+  document.getElementById('p-edit-btn').textContent = '✏️ Изменить';
+
+  openOverlay('profile-overlay');
+}
+window.openProfile = openProfile;
+
+function toggleProfileEdit() {
+  const editMode = document.getElementById('p-edit-mode');
+  const viewMode = document.getElementById('p-view-mode');
+  const btn = document.getElementById('p-edit-btn');
+  const isEditing = editMode.style.display !== 'none';
+  if (isEditing) {
+    editMode.style.display = 'none';
+    viewMode.style.display = '';
+    btn.textContent = '✏️ Изменить';
+  } else {
+    // Populate fields
+    document.getElementById('p-bio-input').value = currentUser.bio || '';
+    document.getElementById('p-bio-count').textContent = (currentUser.bio || '').length + '/160';
+    document.getElementById('p-tg-input').value = currentUser.tg || '';
+    document.getElementById('p-vk-input').value = currentUser.vk || '';
+    document.getElementById('p-dc-input').value = currentUser.dc || '';
+    editMode.style.display = '';
+    viewMode.style.display = 'none';
+    btn.textContent = '✕ Закрыть';
+
+    // Bio counter
+    document.getElementById('p-bio-input').oninput = function() {
+      document.getElementById('p-bio-count').textContent = this.value.length + '/160';
+    };
+  }
+}
+window.toggleProfileEdit = toggleProfileEdit;
+
+async function saveProfileEdit() {
+  if (!currentUser || currentUser.isGuest) { showNotif('⚠️', 'Гостям недоступно'); return; }
+  const bio = document.getElementById('p-bio-input').value.trim().slice(0, 160);
+  const tg = document.getElementById('p-tg-input').value.trim().replace('@', '');
+  const vk = document.getElementById('p-vk-input').value.trim();
+  const dc = document.getElementById('p-dc-input').value.trim();
+
+  currentUser.bio = bio; currentUser.tg = tg; currentUser.vk = vk; currentUser.dc = dc;
+  try {
+    await _fb.updateDoc(_fb.doc(_fb.db, 'users', currentUser.uid), { bio, tg, vk, dc });
+    showNotif('✅ Сохранено', 'Профиль обновлён!');
+    toggleProfileEdit();
+    // refresh view
+    const bioDisplay = document.getElementById('p-bio-display');
+    if (bio) { bioDisplay.textContent = bio; bioDisplay.classList.remove('bio-empty'); }
+    else { bioDisplay.textContent = 'Нет описания'; bioDisplay.classList.add('bio-empty'); }
+    renderSocials(document.getElementById('p-socials-display'), currentUser);
+  } catch(e) {
+    showNotif('❌ Ошибка', e.message);
+  }
+}
+window.saveProfileEdit = saveProfileEdit;
+
+function triggerAvatarUpload() {
+  if (!currentUser || currentUser.isGuest) { showNotif('⚠️', 'Аватарки только для зарегистрированных'); return; }
+  document.getElementById('avatar-file-input').click();
+}
+window.triggerAvatarUpload = triggerAvatarUpload;
+
+function handleAvatarUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) { showNotif('❌ Файл слишком большой', 'Максимум 500 КБ'); return; }
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    currentUser.avatarDataUrl = dataUrl;
+    // Update avatar display
+    const avatarEl = document.getElementById('p-avatar-big');
+    avatarEl.innerHTML = `<img src="${dataUrl}" alt="avatar"><div class="avatar-edit-hint">📷</div>`;
+    // Update header chip
+    document.getElementById('header-avatar').innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    // Save to Firestore (as base64 - small images only)
+    try {
+      await _fb.updateDoc(_fb.doc(_fb.db, 'users', currentUser.uid), { avatarDataUrl: dataUrl });
+      showNotif('✅ Аватарка обновлена!', 'Теперь тебя узнают в рейтинге');
+    } catch(e) { showNotif('❌ Ошибка', 'Не удалось сохранить'); }
+  };
+  reader.readAsDataURL(file);
+}
+window.handleAvatarUpload = handleAvatarUpload;
+
+/* ============================================================
+   VIEWER PROFILE (чужой профиль из рейтинга)
+============================================================ */
+async function openViewerProfile(uid) {
+  if (!uid) return;
+  // If it's me — open my profile instead
+  if (currentUser && uid === currentUser.uid) {
+    closeOverlay('rating-overlay');
+    openProfile();
+    return;
+  }
+  // Load from Firestore
+  try {
+    const snap = await _fb.getDoc(_fb.doc(_fb.db, 'users', uid));
+    if (!snap.exists()) { showNotif('❌', 'Профиль не найден'); return; }
+    const p = snap.data();
+    const titleInfo = SPECIAL_USERNAMES.find(u => u.id === p.title) || SPECIAL_USERNAMES[4];
+    const isHoF = (p.achievements||[]).length === ALL_ACHIEVEMENTS.length;
+
+    document.getElementById('vp-headline').textContent = p.nick + ' — профиль';
+    document.getElementById('vp-nick').textContent = p.nick;
+    document.getElementById('vp-badge').textContent = `${titleInfo.label} · ${titleInfo.name}`;
+    document.getElementById('vp-badge').style = titleInfo.css;
+    document.getElementById('vp-rank').textContent = isHoF ? '🏆 HALL OF FAME' : `TROOPER · ${p.userMessageCount||0} СООБЩЕНИЙ`;
+    document.getElementById('vp-rating').textContent = p.rating || 100;
+    document.getElementById('vp-wpm').textContent = p.bestWPM || '—';
+    document.getElementById('vp-words').textContent = p.totalWords || 0;
+    document.getElementById('vp-msgs').textContent = p.userMessageCount || 0;
+    document.getElementById('vp-wins').textContent = p.wins || 0;
+    document.getElementById('vp-losses').textContent = p.losses || 0;
+
+    // Avatar
+    const vpAvatar = document.getElementById('vp-avatar');
+    if (p.avatarDataUrl) {
+      vpAvatar.innerHTML = `<img src="${p.avatarDataUrl}" alt="avatar">`;
+    } else {
+      vpAvatar.innerHTML = `<span>${(p.nick||'?')[0].toUpperCase()}</span>`;
+    }
+
+    // Bio
+    const bioWrap = document.getElementById('vp-bio-wrap');
+    const bioEl = document.getElementById('vp-bio');
+    if (p.bio) { bioEl.textContent = p.bio; bioWrap.style.display = ''; }
+    else { bioWrap.style.display = 'none'; }
+
+    // Socials
+    const socialsWrap = document.getElementById('vp-socials-wrap');
+    const socialsEl = document.getElementById('vp-socials');
+    renderSocials(socialsEl, p);
+    const hasSocials = p.tg || p.vk || p.dc;
+    socialsWrap.style.display = hasSocials ? '' : 'none';
+
+    // Achievements
+    const vpAchieves = document.getElementById('vp-achieves');
+    const earnedIds = new Set(p.achievements || []);
+    vpAchieves.innerHTML = ALL_ACHIEVEMENTS.map(a => {
+      const has = earnedIds.has(a.id);
+      return `<div class="achieve-item ${has ? 'earned' : ''}">
+        <div class="achieve-icon">${has ? a.icon : '🔒'}</div>
+        <div><div class="achieve-name" style="${has ? '' : 'opacity:0.4'}">${a.name}</div><div class="achieve-desc">${a.desc}</div></div>
+      </div>`;
+    }).join('');
+
+    openOverlay('viewer-overlay');
+  } catch(e) {
+    showNotif('❌ Ошибка', e.message);
+  }
+}
+window.openViewerProfile = openViewerProfile;
+
+/* ============================================================
+   RATING
+============================================================ */
+async function openRating() {
+  const panel = document.getElementById('rating-list');
+  panel.innerHTML = '<div style="color:var(--md-on-surface-variant);font-size:13px;padding:10px 0">Загрузка рейтинга...</div>';
+  openOverlay('rating-overlay');
+  try {
+    const q = _fb.query(_fb.collection(_fb.db, 'users'), _fb.orderBy('rating', 'desc'), _fb.limit(20));
+    const snap = await _fb.getDocs(q);
+    const players = [];
+    snap.forEach(d => players.push(d.data()));
+    if (currentUser && !currentUser.isGuest) {
+      const inList = players.find(p => p.uid === currentUser.uid);
+      if (!inList) players.push({ ...currentUser, totalWords, totalChars, bestWPM, achievements: [...achievements] });
+    }
+    panel.innerHTML = players.map((p, i) => {
+      const titleInfo = SPECIAL_USERNAMES.find(u => u.id === p.title) || SPECIAL_USERNAMES[4];
+      const isMe = currentUser && p.uid === currentUser.uid;
+      const posIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+      return `<div class="rating-row ${isMe ? 'me' : ''} ${i === 0 ? 'top1' : ''}" onclick="openViewerProfile('${p.uid}')">
+        <div class="rating-pos">${posIcon}</div>
+        <div class="rating-info">
+          <div class="rating-name">${p.nick}${isMe ? ' <span style="color:var(--md-primary);font-size:10px">(ты)</span>' : ''}</div>
+          <div class="rating-sub"><span style="${titleInfo.css};padding:1px 6px;border-radius:4px;font-size:9px">${titleInfo.label}</span> <span style="margin-left:6px">W:${p.wins||0} L:${p.losses||0}</span></div>
+        </div>
+        <div class="rating-pts">${p.rating || 100}</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--md-on-surface-variant);font-size:13px;padding:10px 0">Нет игроков</div>';
+  } catch(e) {
+    panel.innerHTML = '<div style="color:var(--md-error);font-size:13px;padding:10px 0">Ошибка: ' + e.message + '</div>';
+  }
+}
+window.openRating = openRating;
+
+/* ============================================================
+   DUEL PANEL
+============================================================ */
+function openDuelPanel() {
+  if (!currentUser || currentUser.isGuest) { showNotif('⚔️ Дуэль', 'Гостям дуэли недоступны. Зарегистрируйся!'); return; }
+  switchDuelTab('create');
+  openOverlay('duel-overlay');
+}
+window.openDuelPanel = openDuelPanel;
+
+function switchDuelTab(tab) {
+  ['create','join'].forEach(t => {
+    document.getElementById('duel-tab-' + t).style.display = t === tab ? '' : 'none';
+    // FIX: select from duel-overlay, not global
+    const tabEl = document.querySelector(`#duel-overlay .md3-tab[data-tab="${t}"]`);
+    if (tabEl) tabEl.classList.toggle('active', t === tab);
+  });
+}
+window.switchDuelTab = switchDuelTab;
+
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function selectDuelTime(el) {
+  document.querySelectorAll('.time-card').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+}
+window.selectDuelTime = selectDuelTime;
+
+async function createLobby() {
+  if (!currentUser || currentUser.isGuest) { showNotif('Дуэль', 'Гостям дуэли недоступны!'); return; }
+  const settings = {
+    seconds: parseInt(document.querySelector('.time-card.active')?.dataset.seconds || 60),
+    antiCopy: document.getElementById('d-anticopy').classList.contains('on'),
+    antiRepeat: document.getElementById('d-antirepeat').classList.contains('on'),
+    ruOnly: document.getElementById('d-ruonly').classList.contains('on'),
+    punisher: document.getElementById('d-punisher').classList.contains('on'),
+    stakes: parseInt(document.getElementById('d-stakes').value) || 20,
+  };
+  duelSettings = settings;
+  lobbyCode = generateCode();
+  const lobRef = _fb.ref(_fb.rtdb, `lobbies/${lobbyCode}`);
+  await _fb.set(lobRef, {
+    code: lobbyCode,
+    host: { uid: currentUser.uid, nick: currentUser.nick, title: currentUser.title, rating: currentUser.rating || 100 },
+    settings, status: 'waiting', createdAt: Date.now(),
+  });
+  setTimeout(() => _fb.remove(lobRef).catch(()=>{}), 600000);
+  document.getElementById('lobby-waiting').style.display = '';
+  document.getElementById('lobby-code-display').textContent = lobbyCode;
+  document.querySelector('#duel-tab-create .btn-filled').style.display = 'none';
+  lobbyListenerRef = lobRef;
+  _fb.onValue(lobRef, snap => {
+    if (!snap.exists()) return;
+    const lobby = snap.val();
+    if (lobby.status === 'ready' && lobby.guest && !duelActive) {
+      _fb.off(lobRef);
+      document.getElementById('lobby-status-text').textContent = `${lobby.guest.nick} вошёл! Дуэль начинается...`;
+      duelOpponent = lobby.guest;
+      const roomRef = _fb.ref(_fb.rtdb, `duels/${lobbyCode}`);
+      duelRoomId = lobbyCode; duelRoomRef = roomRef;
+      _fb.set(roomRef, {
+        status: 'active', settings, startedAt: Date.now(),
+        players: {
+          [currentUser.uid]: { nick: currentUser.nick, title: currentUser.title, rating: currentUser.rating||100, words:0, chars:0, msgs:0, violations:0 },
+          [lobby.guest.uid]: { nick: lobby.guest.nick, title: lobby.guest.title, rating: lobby.guest.rating||100, words:0, chars:0, msgs:0, violations:0 },
+        },
+        messages: {},
+      }).then(() => {
+        _fb.update(lobRef, { status: 'started', roomId: lobbyCode });
+        closeOverlay('duel-overlay');
+        setTimeout(() => startRealDuel(lobbyCode, { startedAt: Date.now(), settings }), 500);
+      });
+    }
+  });
+}
+window.createLobby = createLobby;
+
+function copyLobbyCode() {
+  if (!lobbyCode) return;
+  navigator.clipboard.writeText(lobbyCode).then(() => showNotif('📋 Скопировано', 'Код ' + lobbyCode + ' в буфере'));
+}
+window.copyLobbyCode = copyLobbyCode;
+
+async function cancelLobby() {
+  if (lobbyCode) {
+    await _fb.remove(_fb.ref(_fb.rtdb, `lobbies/${lobbyCode}`)).catch(()=>{});
+    if (lobbyListenerRef) { _fb.off(lobbyListenerRef); lobbyListenerRef = null; }
+  }
+  lobbyCode = null;
+  document.getElementById('lobby-waiting').style.display = 'none';
+  document.querySelector('#duel-tab-create .btn-filled').style.display = '';
+  addMessage('system', 'Лобби отменено.');
+}
+window.cancelLobby = cancelLobby;
+
+async function joinLobby() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  const err = document.getElementById('join-error');
+  const preview = document.getElementById('join-lobby-preview');
+  err.textContent = ''; preview.style.display = 'none';
+  if (code.length !== 6) { err.textContent = 'Код должен быть 6 символов'; return; }
+  const lobRef = _fb.ref(_fb.rtdb, `lobbies/${code}`);
+  const snap = await _fb.get(lobRef);
+  if (!snap.exists()) { err.textContent = 'Лобби не найдено. Проверь код.'; return; }
+  const lobby = snap.val();
+  if (lobby.status !== 'waiting') { err.textContent = 'Это лобби уже недоступно.'; return; }
+  if (lobby.host.uid === currentUser.uid) { err.textContent = 'Нельзя войти в своё лобби.'; return; }
+  pendingJoinData = { code, lobby, lobRef };
+  const s = lobby.settings;
+  const mins = s.seconds / 60;
+  const rules = [];
+  if (s.antiCopy) rules.push('🚫 Анти-копипаст');
+  if (s.antiRepeat) rules.push('🔁 Анти-повтор');
+  if (s.ruOnly) rules.push('🇷🇺 Только RU');
+  if (s.punisher) rules.push('⚡ Каратель');
+  document.getElementById('join-lobby-info').innerHTML = `
+    <div>Хост: <strong style="color:var(--md-on-surface)">${lobby.host.nick}</strong> (⚡${lobby.host.rating})</div>
+    <div>Время: <strong style="color:var(--md-on-surface)">${mins} мин</strong></div>
+    <div>Ставка: <strong style="color:var(--gold)">⚡${s.stakes} очков</strong></div>
+    ${rules.length ? `<div style="margin-top:6px">${rules.join(' · ')}</div>` : ''}
+  `;
+  preview.style.display = '';
+}
+window.joinLobby = joinLobby;
+
+async function confirmJoinLobby() {
+  if (!pendingJoinData) return;
+  const { code, lobby, lobRef } = pendingJoinData;
+  pendingJoinData = null;
+  duelSettings = lobby.settings; duelOpponent = lobby.host;
+  duelRoomId = code; duelRoomRef = _fb.ref(_fb.rtdb, `duels/${code}`);
+  await _fb.update(lobRef, { status: 'ready', guest: { uid: currentUser.uid, nick: currentUser.nick, title: currentUser.title, rating: currentUser.rating||100 } });
+  closeOverlay('duel-overlay');
+  addMessage('system', `✅ Вошёл в лобби ${code}! Ждём хоста...`);
+  _fb.onValue(duelRoomRef, snap => {
+    if (!snap.exists() || duelActive) return;
+    const room = snap.val();
+    if (room.status === 'active') { _fb.off(duelRoomRef); startRealDuel(code, room); }
+  });
+}
+window.confirmJoinLobby = confirmJoinLobby;
+
+function startRealDuel(roomId, room) {
+  duelActive = true; duelTimeLeft = duelSettings.seconds;
+  duelStart = room.startedAt || Date.now();
+  duelMyWords = duelMyChars = duelMyMsgs = 0;
+  duelOppWords = duelOppChars = duelOppMsgs = 0;
+  duelMyViolations = 0;
+  document.getElementById('duel-bar').classList.add('active');
+  document.getElementById('duel-mode-badge').style.display = '';
+  document.getElementById('dp-me-name').textContent = currentUser.nick;
+  document.getElementById('dp-opp-name').textContent = duelOpponent.nick;
+  addMessage('system', `⚔ ДУЭЛЬ НАЧАЛАСЬ! ${currentUser.nick} vs ${duelOpponent.nick} · Ставка: ${duelSettings.stakes} · Время: ${duelSettings.seconds/60} мин`);
+  if (duelSettings.antiCopy) addMessage('system', '🚫 Копипаст бота = автопоражение');
+  if (duelSettings.ruOnly) addMessage('system', '🇷🇺 Только русский язык');
+  const oppRef = _fb.ref(_fb.rtdb, `duels/${roomId}/players/${duelOpponent.uid}`);
+  duelListenerRef = oppRef;
+  _fb.onValue(oppRef, snap => {
+    if (!snap.exists() || !duelActive) return;
+    const d = snap.val();
+    duelOppWords = d.words || 0; duelOppChars = d.chars || 0; duelOppMsgs = d.msgs || 0;
+    updateDuelBar();
+  });
+  const msgsRef = _fb.ref(_fb.rtdb, `duels/${roomId}/messages`);
+  _fb.onValue(msgsRef, snap => {
+    if (!snap.exists() || !duelActive) return;
+    snap.forEach(child => {
+      const m = child.val();
+      if (m.uid === duelOpponent.uid && !m._shown) { addMessage('opponent', m.text); _fb.update(child.ref, { _shown: true }); }
+    });
+  });
+  _fb.onValue(duelRoomRef, snap => {
+    if (!snap.exists() || !duelActive) return;
+    const room = snap.val();
+    if (room.status === 'ended' && room.winner && room.winner !== currentUser.uid) { _fb.off(duelRoomRef); endRealDuel('time'); }
+  });
+  updateDuelBar();
+  duelTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - duelStart) / 1000);
+    duelTimeLeft = Math.max(0, duelSettings.seconds - elapsed);
+    updateDuelBar();
+    if (duelTimeLeft <= 0) { clearInterval(duelTimer); endRealDuel('time'); }
+  }, 1000);
+}
+
+async function endRealDuel(reason, forceResult = null) {
+  if (!duelActive) return;
+  duelActive = false; clearInterval(duelTimer);
+  document.getElementById('duel-bar').classList.remove('active');
+  document.getElementById('duel-mode-badge').style.display = 'none';
+  if (duelListenerRef) { _fb.off(duelListenerRef); duelListenerRef = null; }
+  if (duelRoomRef) { _fb.off(duelRoomRef); }
+  const elapsed = Math.max(1, Math.floor((Date.now() - duelStart) / 1000));
+  const myWpm = ((duelMyWords / elapsed) * 60).toFixed(1);
+  const oppWpm = ((duelOppWords / elapsed) * 60).toFixed(1);
+  let iWin = forceResult !== null ? forceResult : (parseFloat(myWpm) >= parseFloat(oppWpm));
+  if (reason === 'violation') iWin = false;
+  const ratingChange = iWin ? duelSettings.stakes : -duelSettings.stakes;
+  currentUser.rating = Math.max(0, (currentUser.rating || 100) + ratingChange);
+  if (iWin) { currentUser.wins = (currentUser.wins||0)+1; checkAchievement('duel_winner'); }
+  else { currentUser.losses = (currentUser.losses||0)+1; }
+  if (duelRoomId) {
+    _fb.update(_fb.ref(_fb.rtdb, `duels/${duelRoomId}`), { status: 'ended', winner: iWin ? currentUser.uid : duelOpponent?.uid }).catch(()=>{});
+    setTimeout(() => _fb.remove(_fb.ref(_fb.rtdb, `duels/${duelRoomId}`)).catch(()=>{}), 10000);
+  }
+  if (currentUser.uid) _fb.update(_fb.ref(_fb.rtdb, `presence/${currentUser.uid}`), { rating: currentUser.rating }).catch(()=>{});
+  saveUser(); updateHeaderChip();
+  showDuelResult({ myWpm, oppWpm, iWin, ratingChange, reason });
+}
+
+function updateDuelBar() {
+  const elapsed = Math.floor((Date.now() - duelStart) / 1000);
+  const wpm = elapsed > 0 ? ((duelMyWords / elapsed) * 60).toFixed(0) : 0;
+  const oppWpm = elapsed > 0 ? ((duelOppWords / elapsed) * 60).toFixed(0) : 0;
+  const mins = Math.floor(duelTimeLeft / 60);
+  const secs = duelTimeLeft % 60;
+  document.getElementById('duel-timer-display').textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  document.getElementById('dp-me-wpm').textContent = wpm;
+  document.getElementById('dp-opp-wpm').textContent = oppWpm;
+  document.getElementById('dp-me-stats').textContent = `${duelMyWords} слов`;
+  document.getElementById('dp-opp-stats').textContent = `${duelOppWords} слов`;
+  const pct = (duelTimeLeft / duelSettings.seconds) * 100;
+  document.getElementById('duel-time-bar').style.width = pct + '%';
+  if (duelMyViolations > 0) document.getElementById('duel-violations-display').textContent = `⚠ Нарушений: ${duelMyViolations}`;
+}
+
+function showDuelResult({ myWpm, oppWpm, iWin, ratingChange, reason }) {
+  const winText = iWin ? '🏆 ТЫ ПОБЕДИЛ!' : '💀 ТЫ ПРОИГРАЛ';
+  const winColor = iWin ? 'var(--green)' : 'var(--md-error)';
+  const reasonText = reason === 'violation' ? ' (нарушение)' : '';
+  document.getElementById('duel-result-content').innerHTML = `
+    <div class="result-card">
+      <div class="result-title" style="color:${winColor}">${winText}</div>
+      <div class="result-subtitle">vs ${duelOpponent?.nick || 'Соперник'}${reasonText}</div>
+      <div class="result-grid">
+        <div class="result-player">
+          <div class="result-player-name" style="color:var(--md-primary)">${currentUser.nick}</div>
+          <div class="result-stat"><div class="result-stat-val">${myWpm}</div><div class="result-stat-label">WPM</div></div>
+          <div class="result-stat"><div class="result-stat-val" style="font-size:16px">${duelMyWords}</div><div class="result-stat-label">СЛОВ</div></div>
+          <div class="result-stat"><div class="result-stat-val" style="font-size:16px">${duelMyMsgs}</div><div class="result-stat-label">СООБЩЕНИЙ</div></div>
+          <div class="rating-delta ${iWin?'win':'loss'}">${iWin?'+':''}${ratingChange} рейтинга</div>
+        </div>
+        <div class="result-player">
+          <div class="result-player-name" style="color:#a0a8ff">${duelOpponent?.nick || 'Соперник'}</div>
+          <div class="result-stat"><div class="result-stat-val" style="color:#a0a8ff">${oppWpm}</div><div class="result-stat-label">WPM</div></div>
+          <div class="result-stat"><div class="result-stat-val" style="font-size:16px;color:#a0a8ff">${duelOppWords}</div><div class="result-stat-label">СЛОВ</div></div>
+          <div class="result-stat"><div class="result-stat-val" style="font-size:16px;color:#a0a8ff">${duelOppMsgs}</div><div class="result-stat-label">СООБЩЕНИЙ</div></div>
+          <div class="rating-delta ${iWin?'loss':'win'}">${iWin?'-':'+'}${duelSettings.stakes} рейтинга</div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--md-on-surface-variant);font-size:12px;margin-bottom:16px">Текущий рейтинг: <strong style="color:var(--gold)">${currentUser.rating}</strong></div>
+  `;
+  openOverlay('result-overlay');
+}
+
+/* ============================================================
+   MESSAGES
+============================================================ */
+function addMessage(sender, text) {
+  const box = document.getElementById('chat-messages');
+  const m = document.createElement('div');
+  m.className = 'message ' + sender;
+  const time = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+  const senderName = sender === 'user' ? (currentUser?.nick || 'Ты') : sender === 'bot' ? 'TrollBot' : sender === 'opponent' ? (duelOpponent?.nick || 'Соперник') : '⚡ SYSTEM';
+  if (sender === 'system') {
+    m.innerHTML = `${text}`;
+  } else {
+    m.innerHTML = `<div>${text}</div><div class="msg-meta">${senderName} · ${time}</div>`;
+  }
+  box.appendChild(m);
+  pruneMessages();
+  requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+  if (sender === 'bot') botMessages.push(text);
+}
+
+function showTyping() {
+  const box = document.getElementById('chat-messages');
+  const t = document.createElement('div');
+  t.className = 'typing-bubble'; t.id = 'typing-ind';
+  t.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  box.appendChild(t); box.scrollTop = box.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing-ind'); if (t) t.remove(); }
+
+const MAX_DOM_MESSAGES = 200;
+function pruneMessages() {
+  const msgs = document.getElementById('chat-messages').querySelectorAll('.message');
+  if (msgs.length > MAX_DOM_MESSAGES) {
+    for (let i = 0; i < msgs.length - MAX_DOM_MESSAGES; i++) msgs[i].remove();
+  }
+}
+
+/* ============================================================
+   BOT LOGIC
+============================================================ */
+function pickUnique(arr, count, mode) {
+  const used = USED_STORAGE_MAP[mode] || new Set();
+  const out = [];
+  let attempts = 0;
+  while (out.length < count && attempts < 500) {
+    const idx = Math.floor(Math.random() * arr.length);
+    if (!used.has(idx)) { out.push(arr[idx]); used.add(idx); if (used.size > MAX_HISTORY) used.delete([...used][0]); }
+    attempts++;
+  }
+  while (out.length < count) out.push(arr[Math.floor(Math.random() * arr.length)]);
+  return out;
+}
+
+/* Токенизация: убираем мусор, разбиваем на слова */
+function tokenize(text) {
+  return text.toLowerCase()
+    .replace(/[^\wа-яёa-z\s]/gi, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+}
+
+/* Стоп-слова которые не несут смысла */
+const STOP_WORDS = new Set(['это','что','как','так','там','тут','все','они','мне','тебе','себя','свой','своя','него','неё','был','была','буду','быть','меня','тебя','ещё','уже','вот','вам','нам','вас','нас','для','про','при','под','над','без','перед','после','пока','если','хотя','пусть','либо','или','ведь','даже','конечно','просто','очень','лишь','только','также','такой','такая','такие']);
+
+/* Оцениваем релевантность фразы к сообщению юзера */
+function scorePhrase(phrase, userTokens) {
+  if (!userTokens.length) return 0;
+  const phraseTokens = tokenize(phrase);
+  let score = 0;
+  for (const ut of userTokens) {
+    if (STOP_WORDS.has(ut)) continue;
+    for (const pt of phraseTokens) {
+      if (pt === ut) { score += 3; continue; }
+      if (pt.startsWith(ut) || ut.startsWith(pt)) score += 1;
+    }
+  }
+  return score / Math.sqrt(phraseTokens.length + 1);
+}
+
+function improvedResponse(userMsg, mode) {
+  const userLen = userMsg.length;
+  const capsRatio = (userMsg.match(/[А-ЯЁA-Z]/g) || []).length / Math.max(1, userLen);
+  let count = phrasesPerResponse;
+  if (capsRatio > 0.3) count += 1;
+  if (userLen > 300) count += 1;
+  count = Math.min(count, 50);
+
+  const arr = (strength < 5) ? dumbPhrases : phrases;
+  const pool = mode === 'ultra' ? phrases : arr;
+  const used = USED_STORAGE_MAP[mode] || new Set();
+  const userTokens = tokenize(userMsg.replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+
+  // Скорим все фразы
+  const scored = pool.map((phrase, idx) => ({
+    phrase, idx,
+    score: scorePhrase(phrase, userTokens),
+    usedRecently: used.has(idx)
+  }));
+
+  // Штраф за недавно использованные
+  scored.forEach(s => { if (s.usedRecently) s.score *= 0.2; });
+
+  // Сортируем с рандомным шумом чтобы не было предсказуемо
+  scored.sort((a, b) =>
+    (b.score * (0.7 + Math.random() * 0.6)) - (a.score * (0.7 + Math.random() * 0.6))
+  );
+
+  const hasSemantics = scored[0]?.score > 0.3;
+  const chosen = hasSemantics
+    ? scored.slice(0, count)
+    : pickUnique(pool, count, mode).map(p => ({ phrase: p }));
+
+  // Регистрируем использованные
+  chosen.forEach(s => {
+    if (s.idx !== undefined) {
+      used.add(s.idx);
+      if (used.size > MAX_HISTORY) used.delete([...used][0]);
+    }
+  });
+
+  return chosen.map(s => s.phrase || s).join(' ');
+}
+
+function checkCopyPaste(msg) { return botMessages.some(b => b.toLowerCase().trim() === msg.toLowerCase().trim()); }
+function getRepeatStreak() {
+  if (userMessages.length < 2) return 1;
+  let streak = 1;
+  const last = userMessages[userMessages.length - 1].toLowerCase().trim();
+  for (let i = userMessages.length - 2; i >= 0; i--) {
+    if (userMessages[i].toLowerCase().trim() === last) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function isRussian(msg) {
+  const cleaned = msg.replace(/[^а-яёa-z]/gi, '');
+  if (!cleaned) return true;
+  const ruChars = (msg.match(/[а-яё]/gi) || []).length;
+  const enChars = (msg.match(/[a-z]/gi) || []).length;
+  return ruChars > enChars || enChars === 0;
+}
+
+/* ============================================================
+   SEND MESSAGE
+============================================================ */
+function sendMessage() {
+  if (isBanned) return;
+  const input = document.getElementById('user-input');
+  let msg = input.value.trim();
+  if (!msg) return;
+  msg = msg.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  addMessage('user', msg);
+  input.value = '';
+
+  const words = msg.split(/\s+/).filter(Boolean).length;
+  totalWords += words; totalChars += msg.length;
+  userMessages.push(msg);
+  if (userMessages.length > 10) userMessages.shift();
+  userMessageCount++;
+
+  // Fury update: each message increases fury
+  const furydelta = Math.min(words * 2 + (currentMode === 'ultra' ? 10 : currentMode === 'medium' ? 5 : 2), 20);
+  updateFuryMeter(furydelta);
+  updateBotMood();
+
+  // Streak
+  incrementStreak();
+
+  // Duel stats
+  if (duelActive && duelRoomId) {
+    duelMyWords += words; duelMyChars += msg.length; duelMyMsgs++;
+    updateDuelBar();
+    _fb.push(_fb.ref(_fb.rtdb, `duels/${duelRoomId}/messages`), { uid: currentUser.uid, text: msg, ts: Date.now() }).catch(()=>{});
+    _fb.update(_fb.ref(_fb.rtdb, `duels/${duelRoomId}/players/${currentUser.uid}`), { words: duelMyWords, chars: duelMyChars, msgs: duelMyMsgs }).catch(()=>{});
+  }
+
+  checkAchievement('first_msg', userMessageCount === 1);
+  checkAchievement('10_msgs', userMessageCount >= 10);
+  checkAchievement('ultra_survivor', currentMode === 'ultra' && userMessageCount >= 5);
+  checkAchievement('marathon', totalChars >= 1000);
+  checkAchievement('word_master', totalWords >= 500);
+  saveUser();
+
+  if (skillStart) skillText += msg + ' ';
+
+  const rawMsg = msg.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+
+  // Easter eggs
+  if (rawMsg === '420') { openConsole(); return; }
+  if (rawMsg.toLowerCase() === 'ты ахуел' || rawMsg.toLowerCase() === 'прости,прости меня, ратмир, астробой') {
+    showTyping();
+    setTimeout(() => { removeTyping(); addMessage('bot', 'Я извиняюсь... (мирный договор подписан)'); checkAchievement('peace_maker'); updateFuryMeter(-30); }, 600);
+    return;
+  }
+  if (rawMsg.toLowerCase() === 'стоп' && skillStart) { finishSkill(); return; }
+
+  // DUEL CHECKS
+  if (duelActive) {
+    if (duelSettings.ruOnly && !isRussian(rawMsg)) {
+      duelMyViolations++;
+      addMessage('system', '🇷🇺 НАРУШЕНИЕ: Только русский язык! Нарушение #' + duelMyViolations);
+      updateDuelBar();
+      if (duelMyViolations >= 3) { addMessage('system', '❌ Слишком много нарушений! Автопоражение.'); endRealDuel('violation'); }
+      return;
+    }
+    if (duelSettings.antiCopy && checkCopyPaste(rawMsg)) { addMessage('system', '🚫 НАРУШЕНИЕ: Копипаст бота = автопоражение!'); endRealDuel('violation'); return; }
+    if (duelSettings.antiRepeat) {
+      const streak = getRepeatStreak();
+      if (streak >= 3) { addMessage('system', '🔁 НАРУШЕНИЕ: Спам = автопоражение!'); endRealDuel('violation'); return; }
+    }
+  }
+
+  if (rawMsg.length > 1000) {
+    showTyping();
+    setTimeout(() => { removeTyping(); let r = ''; for (let i=0;i<20;i++) r += phrases[Math.floor(Math.random()*phrases.length)] + ' '; addMessage('bot', r); }, 600);
+    return;
+  }
+
+  if (!disableAntiCopy && !duelActive && checkCopyPaste(rawMsg)) {
+    showTyping();
+    setTimeout(() => { removeTyping(); addMessage('bot', 'а без копипасты ты кто?'); checkAchievement('copycat'); }, 400);
+    return;
+  }
+
+  const streak = getRepeatStreak();
+  if (!disableAntiRepeat && !duelActive) {
+    if (streak >= 6) {
+      checkAchievement('repeater');
+      isBanned = true;
+      resetStreak();
+      document.getElementById('ban-overlay').classList.add('active');
+      addMessage('bot', 'Ты долбоёб. Одно и то же больше 5 раз. Бан на 1 минуту.');
+      updateFuryMeter(30);
+      clearTimeout(banTimer);
+      banTimer = setTimeout(() => {
+        isBanned = false;
+        document.getElementById('ban-overlay').classList.remove('active');
+        addMessage('bot', 'Бан снят. Веди себя.');
+      }, 60000);
+      punisherMode = false;
+      return;
+    } else if (streak >= REPEAT_THRESHOLD && !disablePunisher) {
+      punisherMode = true;
+      checkAchievement('repeater');
+      showTyping();
+      setTimeout(() => {
+        removeTyping();
+        let r = ''; for (let i=0;i<10;i++) r += phrases[Math.floor(Math.random()*phrases.length)] + ' ';
+        addMessage('bot', 'РЕЖИМ КАРАТЕЛЯ! ' + r);
+        updateFuryMeter(15);
+      }, 400);
+      return;
+    } else if (punisherMode) {
+      punisherMode = false;
+      showTyping();
+      setTimeout(() => { removeTyping(); addMessage('bot', 'Режим карателя деактивирован.'); }, 400);
+      return;
+    }
+  }
+
+  let resp = '';
+  if (currentMode === 'easy') resp = userMessageCount > 3 ? dumbPhrases[Math.floor(Math.random() * dumbPhrases.length)] : improvedResponse(rawMsg, 'easy');
+  else resp = improvedResponse(rawMsg, currentMode);
+
+  showTyping();
+  const delay = 300 + Math.random() * 400;
+  setTimeout(() => { removeTyping(); addMessage('bot', resp); }, delay);
+}
+window.sendMessage = sendMessage;
+
+/* ============================================================
+   MODE
+============================================================ */
+function setMode(mode) {
+  currentMode = mode;
+  if (mode === 'easy') { userMessageCount = 0; updateFuryMeter(-20); }
+  if (mode === 'ultra') { updateFuryMeter(20); showNotif('🔥 ULTRA MODE', 'ТЫ ВЫБРАЛ АД. УДАЧИ.'); }
+  document.querySelectorAll('.mode-chip').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  const msgs = { easy: 'Режим EASY. Бот щадит тебя... пока.', medium: 'Режим MEDIUM активирован.', ultra: 'ULTRA MODE. ТЕБЕ ПИЗДА.' };
+  addMessage('bot', msgs[mode]);
+}
+window.setMode = setMode;
+
+/* ============================================================
+   WPM
+============================================================ */
+function openSkill() { openOverlay('skill-overlay'); }
+function selectTimer(el) {
+  document.querySelectorAll('.timer-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  skillSeconds = parseInt(el.dataset.s);
+}
+function startSkill() {
+  closeOverlay('skill-overlay');
+  skillStart = Date.now(); skillText = '';
+  clearInterval(skillTimer);
+  addMessage('bot', `⏱ Поехали! Время: ${skillSeconds / 60} мин. Напиши «стоп» чтобы завершить.`);
+  skillTimer = setInterval(() => {
+    const left = skillSeconds - Math.floor((Date.now() - skillStart) / 1000);
+    if (left <= 0) { clearInterval(skillTimer); addMessage('bot', 'Время! Напиши «стоп» для результата.'); }
+  }, 500);
+}
+function finishSkill() {
+  const spent = Math.min(skillSeconds, Math.floor((Date.now() - skillStart) / 1000));
+  const words = skillText.trim().split(/\s+/).filter(Boolean).length;
+  const chars = skillText.length;
+  const wpm = spent ? (words / spent * 60).toFixed(1) : 0;
+  if (parseFloat(wpm) > bestWPM) { bestWPM = parseFloat(wpm); if (currentUser) { currentUser.bestWPM = bestWPM; saveUser(); } }
+  addMessage('bot', `📊 Результат: ${words} слов / ${chars} симв / ${spent}с / ${wpm} сл/мин`);
+  checkAchievement('speed_demon', parseFloat(wpm) >= 60);
+  checkAchievement('high_wpm', parseFloat(wpm) >= 80);
+  skillStart = 0;
+}
+window.openSkill = openSkill;
+window.selectTimer = selectTimer;
+window.startSkill = startSkill;
+
+/* ============================================================
+   CONSOLE
+============================================================ */
+function openConsole() {
+  document.getElementById('c-strength').value = strength;
+  document.getElementById('c-strength-val').textContent = strength;
+  document.getElementById('c-phrases').value = phrasesPerResponse;
+  document.getElementById('c-phrases-val').textContent = phrasesPerResponse;
+  document.getElementById('t-punisher').classList.toggle('on', !disablePunisher);
+  document.getElementById('t-anticopy').classList.toggle('on', !disableAntiCopy);
+  document.getElementById('t-antirepeat').classList.toggle('on', !disableAntiRepeat);
+  openOverlay('console-overlay');
+}
+function saveConsole() {
+  strength = parseInt(document.getElementById('c-strength').value);
+  phrasesPerResponse = parseInt(document.getElementById('c-phrases').value);
+  disablePunisher = !document.getElementById('t-punisher').classList.contains('on');
+  disableAntiCopy = !document.getElementById('t-anticopy').classList.contains('on');
+  disableAntiRepeat = !document.getElementById('t-antirepeat').classList.contains('on');
+  closeOverlay('console-overlay');
+  addMessage('bot', 'Настройки сохранены.');
+}
+function unlockAllAchievements() {
+  ALL_ACHIEVEMENTS.forEach(a => achievements.add(a.id));
+  saveUser(); addMessage('bot', 'Все достижения разблокированы!');
+}
+function resetStats() {
+  totalWords = 0; totalChars = 0; bestWPM = 0; userMessageCount = 0;
+  furyLevel = 0; updateFuryMeter(0); resetStreak();
+  saveUser(); addMessage('bot', 'Статистика сброшена.');
+}
+window.openConsole = openConsole;
+window.saveConsole = saveConsole;
+window.unlockAllAchievements = unlockAllAchievements;
+window.resetStats = resetStats;
+
+/* ============================================================
+   ACHIEVEMENTS
+============================================================ */
+function checkAchievement(id, condition = true) {
+  if (condition && !achievements.has(id)) {
+    achievements.add(id);
+    showAchievementToast(id);
+    saveUser();
+    if (achievements.size === ALL_ACHIEVEMENTS.length) {
+      setTimeout(() => addMessage('bot', '🏆 ВСЕ ДОСТИЖЕНИЯ ПОЛУЧЕНЫ. HALL OF FAME!'), 400);
+    }
+  }
+}
+function showAchievementToast(id) {
+  const a = ALL_ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+  const toast = document.getElementById('achieve-toast');
+  toast.innerHTML = `${a.icon} ДОСТИЖЕНИЕ<br><strong>${a.name}</strong>`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   NOTIFICATIONS
+============================================================ */
+function showNotif(title, body) {
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-body').textContent = body;
+  const t = document.getElementById('notif-toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+/* ============================================================
+   DEVICE & ORIENTATION
+============================================================ */
+const DeviceInfo = (() => {
+  const ua = navigator.userAgent;
+  const isTouch = navigator.maxTouchPoints > 0;
+  const isMobile = /Android|iPhone|iPod/i.test(ua) || (isTouch && window.innerWidth < 768);
+  function getOrientation() {
+    if (screen.orientation) return screen.orientation.type.includes('landscape') ? 'landscape' : 'portrait';
+    return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+  }
+  function applyDeviceClass() {
+    const root = document.documentElement;
+    root.classList.remove('device-mobile','device-tablet','device-desktop','orient-portrait','orient-landscape');
+    if (isMobile) root.classList.add('device-mobile'); else root.classList.add('device-desktop');
+    root.classList.add('orient-' + getOrientation());
+  }
+  function showOrientToast(orient) {
+    const t = document.getElementById('orient-toast');
+    if (!t) return;
+    t.textContent = orient === 'landscape' ? '↔ Горизонтальный режим' : '↕ Вертикальный режим';
+    t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000);
+  }
+  applyDeviceClass();
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const prev = document.documentElement.classList.contains('orient-landscape') ? 'landscape' : 'portrait';
+      applyDeviceClass();
+      const curr = getOrientation();
+      if (prev !== curr && isTouch) showOrientToast(curr);
+    }, 150);
+  });
+  if (screen.orientation) {
+    screen.orientation.addEventListener('change', () => { setTimeout(() => { applyDeviceClass(); showOrientToast(getOrientation()); }, 100); });
+  }
+  return { isMobile, isTouch, getOrientation };
+})();
+
+// iOS vh fix
+if (/iPhone|iPad/.test(navigator.userAgent)) {
+  const setVh = () => document.documentElement.style.setProperty('--real-vh', `${window.innerHeight * 0.01}px`);
+  setVh(); window.addEventListener('resize', setVh);
+}
+
+// Passive touch
+document.addEventListener('touchstart', () => {}, { passive: true });
+document.addEventListener('touchmove', () => {}, { passive: true });
+
+/* ============================================================
+   INPUT LISTENERS
+============================================================ */
+document.getElementById('user-input').addEventListener('keypress', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+document.getElementById('login-email').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-pass').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('reg-nick').addEventListener('keypress', e => { if (e.key === 'Enter') doRegister(); });
+document.getElementById('guest-nick').addEventListener('keypress', e => { if (e.key === 'Enter') doGuest(); });
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Set initial mode chip
+document.querySelectorAll('.mode-chip').forEach(b => b.classList.toggle('active', b.dataset.mode === 'medium'));
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
